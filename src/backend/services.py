@@ -112,7 +112,7 @@ def handle_search(query: str, tree_path: Path | None, model: str | None, tempera
     logger.info("Service search query=%s tree=%s", query, path)
     try:
         tree = _load_tree(path)
-        effective_model = search_model or model or settings.model_search
+        effective_model = search_model or settings.chat_model or model
         result = search_tree_with_llm(query, tree, model=effective_model, temperature=temperature)
         node_map = _load_node_map(DEFAULT_NODE_MAP_PATH) or create_node_mapping(tree)
         nodes: List[SearchNode] = [
@@ -141,7 +141,8 @@ def handle_answer(query: str, tree_path: Path | None, model: str | None, tempera
     try:
         tree = _load_tree(path)
         node_map = _load_node_map(DEFAULT_NODE_MAP_PATH) or create_node_mapping(tree)
-        effective_search_model = search_model or model or settings.model_search
+        effective_search_model = search_model or settings.chat_model or model
+        effective_answer_model = answer_model or settings.reasoning_model or model
         search_result, context, answer_text = answer_question(query, tree, model=effective_search_model, temperature=temperature)
         nodes: List[SearchNode] = [
             SearchNode(
@@ -176,8 +177,8 @@ def handle_answer_stream(query: str, tree_path: Path | None, model: str | None, 
     try:
         tree = _load_tree(path)
         node_map = _load_node_map(DEFAULT_NODE_MAP_PATH) or create_node_mapping(tree)
-        effective_search_model = search_model or model or settings.model_search
-        effective_answer_model = answer_model or model or settings.model_answer or settings.model_name
+        effective_search_model = search_model or settings.chat_model or model
+        effective_answer_model = answer_model or settings.reasoning_model or model
         search_result = search_tree_with_llm(query, tree, model=effective_search_model, temperature=temperature)
         nodes: List[SearchNode] = [
             SearchNode(

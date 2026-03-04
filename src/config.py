@@ -11,9 +11,8 @@ class Settings:
         self.openai_api_key = os.getenv("OPENAI_API_KEY", "")
         self.api_key = os.getenv("API_KEY", "")
         self.base_url = os.getenv("BASE_URL", "")
-        self.model_name = os.getenv("MODEL_NAME", "")
-        self.model_search = os.getenv("MODEL_SEARCH", self.model_name)
-        self.model_answer = os.getenv("MODEL_ANSWER", self.model_name)
+        self.chat_model = os.getenv("CHAT_MODEL", "")
+        self.reasoning_model = os.getenv("REASONING_MODEL", "")
 
     def validate(
         self,
