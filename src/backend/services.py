@@ -112,8 +112,8 @@ def handle_search(query: str, tree_path: Path | None, model: str | None, tempera
     logger.info("Service search query=%s tree=%s", query, path)
     try:
         tree = _load_tree(path)
-        # Use reasoning model for search by default; allow overrides
-        effective_model = search_model or settings.reasoning_model or model
+        # search always uses reasoning_model; optional override
+        effective_model = search_model or settings.reasoning_model
         logger.info("Search using model=%s temp=%s", effective_model, temperature)
         result = search_tree_with_llm(query, tree, model=effective_model, temperature=temperature or 0.0)
         node_map = _load_node_map(DEFAULT_NODE_MAP_PATH) or create_node_mapping(tree)
@@ -143,8 +143,8 @@ def handle_answer(query: str, tree_path: Path | None, model: str | None, tempera
     try:
         tree = _load_tree(path)
         node_map = _load_node_map(DEFAULT_NODE_MAP_PATH) or create_node_mapping(tree)
-        effective_search_model = search_model or settings.reasoning_model or model
-        effective_answer_model = answer_model or settings.chat_model or model
+        effective_search_model = search_model or settings.reasoning_model
+        effective_answer_model = answer_model or settings.chat_model
         logger.info("Answer search model=%s temp=%s; answer model=%s temp=%s", effective_search_model, temperature, effective_answer_model, temperature)
         search_result, context, answer_text = answer_question(query, tree, model=effective_search_model, temperature=temperature or 0.0)
         nodes: List[SearchNode] = [
@@ -180,8 +180,8 @@ def handle_answer_stream(query: str, tree_path: Path | None, model: str | None, 
     try:
         tree = _load_tree(path)
         node_map = _load_node_map(DEFAULT_NODE_MAP_PATH) or create_node_mapping(tree)
-        effective_search_model = search_model or settings.reasoning_model or model
-        effective_answer_model = answer_model or settings.chat_model or model
+        effective_search_model = search_model or settings.reasoning_model
+        effective_answer_model = answer_model or settings.chat_model
         logger.info("Stream search model=%s temp=%s; answer model=%s temp=%s", effective_search_model, temperature, effective_answer_model, temperature)
         search_result = search_tree_with_llm(query, tree, model=effective_search_model, temperature=temperature or 0.0)
         nodes: List[SearchNode] = [
