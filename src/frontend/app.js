@@ -25,7 +25,7 @@ async function streamAnswer() {
       temperature: parseFloat(document.getElementById('temperature').value) || 0,
     };
 
-    const res = await fetch(`${document.getElementById('apiBase').value}/answer/stream`, {
+    const res = await fetch(`${document.getElementById('apiBase').value}/chat`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
