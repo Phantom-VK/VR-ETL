@@ -4,7 +4,7 @@ from __future__ import annotations
 import json
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Dict, Iterable
+from typing import Any, Dict
 import sys
 
 from src.utils.logger import logger
@@ -25,24 +25,29 @@ class NodeMapBuilder:
             data = json.load(f)
         return data.get("result", data)
 
-    @staticmethod
-    def _iter_roots(tree: Any) -> Iterable[Dict[str, Any]]:
-        if isinstance(tree, list):
-            return tree
-        return [tree]
-
-    def _collect(self, node: Dict[str, Any], mapping: Dict[str, Any]) -> None:
-        node_id = node.get("node_id")
-        if node_id:
-            mapping[node_id] = {
-                "title": node.get("title"),
-                "summary": node.get("summary"),
-                "text": node.get("text"),
-                "page_index": node.get("page_index"),
-                "children": [child.get("node_id") for child in node.get("children", []) if child.get("node_id")],
-            }
-        for child in node.get("children", []):
-            self._collect(child, mapping)
+    def _collect_any(self, obj: Any, mapping: Dict[str, Any]) -> None:
+        """Walk any JSON-like structure and capture every dict with a node_id."""
+        if isinstance(obj, dict):
+            node_id = obj.get("node_id")
+            if node_id:
+                children = []
+                for child in obj.get("children", []) or []:
+                    if isinstance(child, dict) and child.get("node_id"):
+                        children.append(child.get("node_id"))
+                existing = mapping.get(node_id, {})
+                mapping[node_id] = {
+                    **existing,
+                    "title": obj.get("title") or existing.get("title"),
+                    "summary": obj.get("summary") or existing.get("summary"),
+                    "text": obj.get("text") or existing.get("text"),
+                    "page_index": obj.get("page_index") if obj.get("page_index") is not None else existing.get("page_index"),
+                    "children": children or existing.get("children", []),
+                }
+            for value in obj.values():
+                self._collect_any(value, mapping)
+        elif isinstance(obj, list):
+            for item in obj:
+                self._collect_any(item, mapping)
 
     def run(self) -> Dict[str, Any]:
         """Build and persist the node map, returning the mapping dict."""
@@ -50,8 +55,7 @@ class NodeMapBuilder:
             logger.info("Building node map from tree at %s", self.tree_path)
             tree = self._load_tree()
             mapping: Dict[str, Any] = {}
-            for root in self._iter_roots(tree):
-                self._collect(root, mapping)
+            self._collect_any(tree, mapping)
 
             self.output_path.parent.mkdir(parents=True, exist_ok=True)
             with self.output_path.open("w", encoding="utf-8") as f:
