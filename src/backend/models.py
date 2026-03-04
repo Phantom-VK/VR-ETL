@@ -12,9 +12,9 @@ class QueryRequest(BaseModel):
         default=None, description="Path to PageIndex tree JSON (defaults to data/processed/pageindex_tree.json)"
     )
     model: Optional[str] = Field(default=None, description="Override model name (else uses env MODEL_NAME)")
-    search_model: Optional[str] = Field(default=None, description="Optional fast model for retrieval")
+    search_model: Optional[str] = Field(default=None, description="Optional model for retrieval")
     answer_model: Optional[str] = Field(default=None, description="Optional model for final answer")
-    temperature: float = Field(default=0.0, description="Sampling temperature")
+    temperature: Optional[float] = Field(default=None, description="Override temperature (else use env defaults)")
 
 
 class SearchNode(BaseModel):
