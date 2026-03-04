@@ -20,7 +20,7 @@ def call_llm(prompt: str, model: Optional[str] = None, temperature: float = 0.0,
         settings.validate(require_openai=False, require_pageindex=False, require_generic_llm=True)
         api_key = settings.api_key
         api_base = base_url or settings.base_url
-        model_name = model or settings.model_name
+        model_name = model
         client = OpenAI(api_key=api_key, base_url=api_base)
         logger.info("Calling LLM model=%s temp=%.2f prompt_chars=%d", model_name, temperature, len(prompt))
         response = client.chat.completions.create(
@@ -42,7 +42,7 @@ def call_llm_stream(prompt: str, model: Optional[str] = None, temperature: float
         settings.validate(require_pageindex=False, require_generic_llm=True)
         api_key = settings.api_key
         api_base = base_url or settings.base_url
-        model_name = model or settings.model_name
+        model_name = model
         client = OpenAI(api_key=api_key, base_url=api_base)
         logger.info("Streaming LLM model=%s temp=%.2f prompt_chars=%d", model_name, temperature, len(prompt))
         stream = client.chat.completions.create(
@@ -73,4 +73,4 @@ def call_llm_stream(prompt: str, model: Optional[str] = None, temperature: float
         raise VRETLException(str(exc), sys) from exc
 
 
-__all__ = ["call_llm"]
+__all__ = ["call_llm", "call_llm_stream"]

@@ -39,8 +39,8 @@ class Settings:
                 missing.append("API_KEY")
             if not self.base_url:
                 missing.append("BASE_URL")
-            if not self.model_name:
-                missing.append("MODEL_NAME")
+            if not (self.chat_model or self.reasoning_model):
+                missing.append("CHAT_MODEL/REASONING_MODEL")
         if missing:
             names = ", ".join(missing)
             raise RuntimeError(f"Missing required environment variables: {names}")
