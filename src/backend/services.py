@@ -11,25 +11,40 @@ from src.backend.retrieval import search_tree_with_llm, create_node_mapping
 from src.backend.answer import answer_question, build_context
 from src.backend.llm import call_llm_stream
 from src.backend.models import SearchNode, SearchResponse, AnswerResponse
+from src.config import settings
 from src.utils.logger import logger
 
 DEFAULT_TREE_PATH = Path("data/processed/pageindex_tree.json")
 DEFAULT_NODE_MAP_PATH = Path("data/processed/node_map.json")
+_TREE_CACHE: Dict[Path, Tuple[float, Any]] = {}
+_NODE_MAP_CACHE: Dict[Path, Tuple[float, Dict[str, Any]]] = {}
 
 
 def _load_tree(tree_path: Path) -> Any:
-    if not tree_path.exists():
+    mtime = tree_path.stat().st_mtime if tree_path.exists() else None
+    if not mtime:
         raise FileNotFoundError(f"Tree file not found at {tree_path}; run the ETL first.")
+    cached = _TREE_CACHE.get(tree_path)
+    if cached and cached[0] == mtime:
+        return cached[1]
     with tree_path.open("r", encoding="utf-8") as f:
         data = json.load(f)
-    return data.get("result", data)
+    tree = data.get("result", data)
+    _TREE_CACHE[tree_path] = (mtime, tree)
+    return tree
 
 def _load_node_map(node_map_path: Path) -> Dict[str, Any] | None:
     if not node_map_path.exists():
         return None
+    mtime = node_map_path.stat().st_mtime
+    cached = _NODE_MAP_CACHE.get(node_map_path)
+    if cached and cached[0] == mtime:
+        return cached[1]
     try:
         with node_map_path.open("r", encoding="utf-8") as f:
-            return json.load(f)
+            data = json.load(f)
+        _NODE_MAP_CACHE[node_map_path] = (mtime, data)
+        return data
     except Exception:
         logger.warning("Failed to load node_map from %s; falling back to rebuild", node_map_path)
         return None
@@ -92,12 +107,13 @@ async def _stream_reasoning_and_answer(prompt: str, model: str | None, temperatu
 
 
 
-def handle_search(query: str, tree_path: Path | None, model: str | None, temperature: float) -> SearchResponse:
+def handle_search(query: str, tree_path: Path | None, model: str | None, temperature: float, search_model: str | None = None) -> SearchResponse:
     path = tree_path or DEFAULT_TREE_PATH
     logger.info("Service search query=%s tree=%s", query, path)
     try:
         tree = _load_tree(path)
-        result = search_tree_with_llm(query, tree, model=model, temperature=temperature)
+        effective_model = search_model or model or settings.model_search
+        result = search_tree_with_llm(query, tree, model=effective_model, temperature=temperature)
         node_map = _load_node_map(DEFAULT_NODE_MAP_PATH) or create_node_mapping(tree)
         nodes: List[SearchNode] = [
             SearchNode(
@@ -119,13 +135,15 @@ def handle_search(query: str, tree_path: Path | None, model: str | None, tempera
         raise HTTPException(status_code=500, detail=str(e))
 
 
-def handle_answer(query: str, tree_path: Path | None, model: str | None, temperature: float) -> AnswerResponse:
+def handle_answer(query: str, tree_path: Path | None, model: str | None, temperature: float, search_model: str | None = None, answer_model: str | None = None) -> AnswerResponse:
     path = tree_path or DEFAULT_TREE_PATH
     logger.info("Service answer query=%s tree=%s", query, path)
     try:
         tree = _load_tree(path)
         node_map = _load_node_map(DEFAULT_NODE_MAP_PATH) or create_node_mapping(tree)
-        search_result, context, answer_text = answer_question(query, tree, model=model, temperature=temperature)
+        effective_search_model = search_model or model or settings.model_search
+        effective_answer_model = answer_model or model or settings.model_answer or settings.model_name
+        search_result, context, answer_text = answer_question(query, tree, model=effective_search_model, temperature=temperature)
         nodes: List[SearchNode] = [
             SearchNode(
                 node_id=nid,
@@ -153,13 +171,15 @@ def handle_answer(query: str, tree_path: Path | None, model: str | None, tempera
         raise HTTPException(status_code=500, detail=str(e))
 
 
-def handle_answer_stream(query: str, tree_path: Path | None, model: str | None, temperature: float):
+def handle_answer_stream(query: str, tree_path: Path | None, model: str | None, temperature: float, search_model: str | None = None, answer_model: str | None = None):
     path = tree_path or DEFAULT_TREE_PATH
     logger.info("Service answer_stream query=%s tree=%s", query, path)
     try:
         tree = _load_tree(path)
         node_map = _load_node_map(DEFAULT_NODE_MAP_PATH) or create_node_mapping(tree)
-        search_result = search_tree_with_llm(query, tree, model=model, temperature=temperature)
+        effective_search_model = search_model or model or settings.model_search
+        effective_answer_model = answer_model or model or settings.model_answer or settings.model_name
+        search_result = search_tree_with_llm(query, tree, model=effective_search_model, temperature=temperature)
         nodes: List[SearchNode] = [
             SearchNode(
                 node_id=nid,
@@ -192,7 +212,7 @@ Provide a clear, concise answer based only on the context provided.
 
         async def async_stream():
             yield json.dumps(meta) + "\n"
-            async for evt in _stream_reasoning_and_answer(prompt, model, temperature):
+            async for evt in _stream_reasoning_and_answer(prompt, effective_answer_model, temperature):
                 yield json.dumps(evt) + "\n"
             yield json.dumps({"type": "done"}) + "\n"
 

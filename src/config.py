@@ -12,6 +12,8 @@ class Settings:
         self.api_key = os.getenv("API_KEY", "")
         self.base_url = os.getenv("BASE_URL", "")
         self.model_name = os.getenv("MODEL_NAME", "")
+        self.model_search = os.getenv("MODEL_SEARCH", self.model_name)
+        self.model_answer = os.getenv("MODEL_ANSWER", self.model_name)
 
     def validate(
         self,
