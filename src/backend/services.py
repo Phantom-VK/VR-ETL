@@ -114,8 +114,9 @@ def handle_search(query: str, tree_path: Path | None, model: str | None, tempera
         tree = _load_tree(path)
         # search always uses reasoning_model; optional override
         effective_model = search_model or settings.reasoning_model
-        logger.info("Search using model=%s temp=%s", effective_model, temperature)
-        result = search_tree_with_llm(query, tree, model=effective_model, temperature=temperature or 0.0)
+        eff_temp = temperature if temperature is not None else settings.reasoning_temperature
+        logger.info("Search using model=%s temp=%.2f", effective_model, eff_temp)
+        result = search_tree_with_llm(query, tree, model=effective_model, temperature=eff_temp)
         node_map = _load_node_map(DEFAULT_NODE_MAP_PATH) or create_node_mapping(tree)
         nodes: List[SearchNode] = [
             SearchNode(
@@ -145,8 +146,10 @@ def handle_answer(query: str, tree_path: Path | None, model: str | None, tempera
         node_map = _load_node_map(DEFAULT_NODE_MAP_PATH) or create_node_mapping(tree)
         effective_search_model = search_model or settings.reasoning_model
         effective_answer_model = answer_model or settings.chat_model
-        logger.info("Answer search model=%s temp=%s; answer model=%s temp=%s", effective_search_model, temperature, effective_answer_model, temperature)
-        search_result, context, answer_text = answer_question(query, tree, model=effective_search_model, temperature=temperature or 0.0)
+        search_temp = temperature if temperature is not None else settings.reasoning_temperature
+        answer_temp = temperature if temperature is not None else settings.chat_temperature
+        logger.info("Answer search model=%s temp=%.2f; answer model=%s temp=%.2f", effective_search_model, search_temp, effective_answer_model, answer_temp)
+        search_result, context, answer_text = answer_question(query, tree, model=effective_search_model, temperature=search_temp)
         nodes: List[SearchNode] = [
             SearchNode(
                 node_id=nid,
@@ -182,8 +185,10 @@ def handle_answer_stream(query: str, tree_path: Path | None, model: str | None, 
         node_map = _load_node_map(DEFAULT_NODE_MAP_PATH) or create_node_mapping(tree)
         effective_search_model = search_model or settings.reasoning_model
         effective_answer_model = answer_model or settings.chat_model
-        logger.info("Stream search model=%s temp=%s; answer model=%s temp=%s", effective_search_model, temperature, effective_answer_model, temperature)
-        search_result = search_tree_with_llm(query, tree, model=effective_search_model, temperature=temperature or 0.0)
+        search_temp = temperature if temperature is not None else settings.reasoning_temperature
+        answer_temp = temperature if temperature is not None else settings.chat_temperature
+        logger.info("Stream search model=%s temp=%.2f; answer model=%s temp=%.2f", effective_search_model, search_temp, effective_answer_model, answer_temp)
+        search_result = search_tree_with_llm(query, tree, model=effective_search_model, temperature=search_temp)
         nodes: List[SearchNode] = [
             SearchNode(
                 node_id=nid,
@@ -216,7 +221,7 @@ Provide a clear, concise answer based only on the context provided.
 
         async def async_stream():
             yield json.dumps(meta) + "\n"
-            async for evt in _stream_reasoning_and_answer(prompt, effective_answer_model, temperature or 0.0):
+            async for evt in _stream_reasoning_and_answer(prompt, effective_answer_model, answer_temp):
                 yield json.dumps(evt) + "\n"
             yield json.dumps({"type": "done"}) + "\n"
 
