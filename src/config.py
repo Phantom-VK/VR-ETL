@@ -9,29 +9,35 @@ class Settings:
     def __init__(self) -> None:
         self.pageindex_api_key = os.getenv("PAGEINDEX_API_KEY", "")
         self.openai_api_key = os.getenv("OPENAI_API_KEY", "")
-        self.deepseek_api_key = os.getenv("DEEPSEEK_API_KEY", "")
-        self.deepseek_base_url = os.getenv("DEEPSEEK_BASE_URL", "https://api.deepseek.com")
+        self.api_key = os.getenv("API_KEY", "")
+        self.base_url = os.getenv("BASE_URL", "")
+        self.model_name = os.getenv("MODEL_NAME", "")
 
     def validate(
         self,
-        require_openai: bool = True,
+        require_openai: bool = False,
         require_pageindex: bool = True,
-        require_deepseek: bool = False,
+        require_generic_llm: bool = False,
     ) -> None:
         """Raise if required keys are missing.
 
         Args:
             require_openai: enforce OPENAI_API_KEY presence.
             require_pageindex: enforce PAGEINDEX_API_KEY presence.
-            require_deepseek: enforce DEEPSEEK_API_KEY presence.
+            require_generic_llm: enforce API_KEY/BASE_URL/MODEL_NAME presence.
         """
         missing = []
         if require_pageindex and not self.pageindex_api_key:
             missing.append("PAGEINDEX_API_KEY")
         if require_openai and not self.openai_api_key:
             missing.append("OPENAI_API_KEY")
-        if require_deepseek and not self.deepseek_api_key:
-            missing.append("DEEPSEEK_API_KEY")
+        if require_generic_llm:
+            if not self.api_key:
+                missing.append("API_KEY")
+            if not self.base_url:
+                missing.append("BASE_URL")
+            if not self.model_name:
+                missing.append("MODEL_NAME")
         if missing:
             names = ", ".join(missing)
             raise RuntimeError(f"Missing required environment variables: {names}")

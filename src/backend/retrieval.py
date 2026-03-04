@@ -43,10 +43,11 @@ def create_node_mapping(tree: Any) -> Dict[str, Dict[str, Any]]:
     return mapping
 
 
-def search_tree_with_llm(query: str, tree: Any, model: str = "deepseek-reasoner", temperature: float = 0.0) -> TreeSearchResult:
+def search_tree_with_llm(query: str, tree: Any, model: str | None = None, temperature: float = 0.0) -> TreeSearchResult:
     """Use the LLM to select relevant nodes from the PageIndex tree."""
     try:
         compact_tree = strip_text(tree)
+        logger.info("Preparing prompt for tree search; compact_tree_len=%d", len(json.dumps(compact_tree)))
         prompt = f"""
 You are given a question and a tree structure of a document.
 Each node contains a node id, node title, and a corresponding summary.
@@ -62,13 +63,16 @@ Please reply in the following JSON format:
     "thinking": "<Your thinking process on which nodes are relevant to the question>",
     "node_list": ["node_id_1", "node_id_2", ..., "node_id_n"]
 }}
+Only return node_id values that appear in the tree. Do not invent node_ids.
 Directly return the final JSON structure. Do not output anything else.
 """
         logger.info("Running LLM tree search for query: %s", query)
         response_text = call_llm(prompt, model=model, temperature=temperature)
+        logger.info("Tree search raw response length=%d", len(response_text))
         result_json = json.loads(response_text)
         thinking = result_json.get("thinking", "")
         node_list = result_json.get("node_list", [])
+        logger.info("Parsed tree search result: nodes=%d", len(node_list))
         return TreeSearchResult(thinking=thinking, node_list=node_list)
     except Exception as exc:  # noqa: BLE001
         raise VRETLException(str(exc), sys) from exc
@@ -76,12 +80,18 @@ Directly return the final JSON structure. Do not output anything else.
 
 def format_search_result(result: TreeSearchResult, node_map: Dict[str, Dict[str, Any]]) -> str:
     """Produce a human-readable string of the reasoning and selected nodes."""
+    known_nodes = [nid for nid in result.node_list if nid in node_map]
+    missing_nodes = [nid for nid in result.node_list if nid not in node_map]
+
     lines = ["Reasoning Process:", result.thinking, "", "Retrieved Nodes:"]
-    for node_id in result.node_list:
+    for node_id in known_nodes:
         node = node_map.get(node_id, {})
         lines.append(
             f"Node ID: {node_id}\t Page: {node.get('page_index')}\t Title: {node.get('title')}"
         )
+    if missing_nodes:
+        lines.append("")
+        lines.append(f"(Skipped unknown node_ids: {', '.join(missing_nodes)})")
     return "\n".join(lines)
 
 

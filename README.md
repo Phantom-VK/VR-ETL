@@ -6,8 +6,8 @@ Vectorless RAG ETL pipeline built around PageIndex to ingest PDFs and produce a 
 - Python 3.9 (this environment’s 3.12 lacks `_ssl`; 3.9 works with pip/HTTPS).
 - Virtual env (`python -m venv .venv`) and activate it.
 - Install deps: `pip install -r requirements.txt`.
-- Secrets: set `PAGEINDEX_API_KEY` (required) and `OPENAI_API_KEY` (not used in ETL but required for downstream agent). Copy `.env.example` → `.env` and fill values, or export in your shell.
-- DeepSeek LLM (reasoner) for retrieval steps: set `DEEPSEEK_API_KEY` and `DEEPSEEK_BASE_URL` (default `https://api.deepseek.com`).
+- Secrets: set `PAGEINDEX_API_KEY` (required). Copy `.env.example` → `.env` and fill values, or export in your shell.
+- Generic LLM access (used by retrieval): set `API_KEY`, `BASE_URL`, `MODEL_NAME` (OpenAI-compatible endpoint).
 
 ## ETL Outputs (knowledge base artifacts)
 - `data/processed/doc_id.txt` – PageIndex doc identifier.
@@ -24,11 +24,11 @@ Vectorless RAG ETL pipeline built around PageIndex to ingest PDFs and produce a 
 3) Logs: emitted to `logs/<dd_mm_YYYY_HH:MM>/<timestamp>.log` and stdout, via `src/utils/logger.py`.
 
 ## How to run LLM tree search (retrieval primitive)
-Requires ETL outputs and DeepSeek creds in `.env`.
+Requires ETL outputs and generic LLM creds in `.env`.
 ```bash
-python run_llm.py --query "What are the conclusions in this document?" --tree data/processed/pageindex_tree.json
+python run_llm.py
 ```
-This calls the LLM to pick relevant node_ids, then prints the reasoning plus the selected nodes with page numbers/titles.
+Defaults: query "What are the conclusions in this document?", tree at `data/processed/pageindex_tree.json`. This calls the LLM to pick relevant node_ids, then prints the reasoning plus the selected nodes with page numbers/titles.
 
 ### Customizing paths/timeouts
 Edit `run_etl.py` or instantiate `PageIndexETLPipeline` directly:
@@ -52,7 +52,7 @@ pipeline.run()
 - `src/etl/build_tree.py` – polls readiness, fetches PageIndex tree JSON.
 - `src/etl/build_node_map.py` – flattens tree into node map.
 - `src/etl/pipeline.py` – orchestrates the full ETL.
-- `src/backend/llm.py` – `call_llm(prompt, model, temperature)` wrapper over DeepSeek/OpenAI-compatible Chat Completions.
+- `src/backend/llm.py` – `call_llm(prompt, model, temperature)` wrapper over OpenAI-compatible chat completions (API key/base URL/model driven by env).
 - `src/backend/retrieval.py` – LLM-driven tree search helpers (strip text, map nodes, format output).
 - `src/utils/logger.py` – shared logging (file + stdout).
 - `src/utils/exception.py` – custom exception with filename/line capture.
