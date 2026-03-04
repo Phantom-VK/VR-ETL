@@ -3,6 +3,10 @@ const statusEl = document.getElementById('status');
 const thinkingEl = document.getElementById('thinking');
 const nodesEl = document.getElementById('nodes');
 const answerEl = document.getElementById('answer');
+const searchModelSel = document.getElementById('searchModel');
+const answerModelSel = document.getElementById('answerModel');
+const temperatureSearch = document.getElementById('temperatureSearch');
+const temperatureAnswer = document.getElementById('temperatureAnswer');
 
 function setStatus(msg) { statusEl.textContent = msg; }
 
@@ -21,18 +25,27 @@ async function streamAnswer() {
 
     const body = {
       query: document.getElementById('question').value,
-      model: document.getElementById('model').value || null,
-      temperature: parseFloat(document.getElementById('temperature').value) || 0,
+      search_model: searchModelSel.value || null,
+      answer_model: answerModelSel.value || null,
+      // pass both temps; backend uses reasoning temp for search and chat temp for answer
+      temperature: null, // we send explicit per-role temps below
     };
 
-    const res = await fetch(`${document.getElementById('apiBase').value}/chat`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Accept': 'application/x-ndjson'
-      },
-      body: JSON.stringify(body),
-    });
+        const res = await fetch(`${document.getElementById('apiBase').value}/chat`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Accept': 'application/x-ndjson'
+          },
+          body: JSON.stringify({
+            ...body,
+            search_model: searchModelSel.value || null,
+            answer_model: answerModelSel.value || null,
+            temperature: null,
+            search_temperature: parseFloat(temperatureSearch.value) || 0.1,
+            answer_temperature: parseFloat(temperatureAnswer.value) || 0.2,
+          }),
+        });
     if (!res.ok || !res.body) throw new Error(await res.text());
 
     const reader = res.body.getReader();
@@ -81,3 +94,24 @@ async function streamAnswer() {
 }
 
 runBtn.addEventListener('click', streamAnswer);
+
+// Populate model dropdowns with defaults and empty option to use server defaults
+function initModels() {
+  const defaults = [
+    { label: 'Use REASONING_MODEL (env)', value: '' },
+    { label: 'reasoning-model', value: 'reasoning-model' },
+    { label: 'chat-model', value: 'chat-model' },
+  ];
+  defaults.forEach(opt => {
+    const o1 = document.createElement('option');
+    o1.value = opt.value;
+    o1.textContent = opt.label;
+    searchModelSel.appendChild(o1.cloneNode(true));
+    const o2 = document.createElement('option');
+    o2.value = opt.value;
+    o2.textContent = opt.label === 'Use REASONING_MODEL (env)' ? 'Use CHAT_MODEL (env)' : opt.label;
+    answerModelSel.appendChild(o2);
+  });
+}
+
+initModels();

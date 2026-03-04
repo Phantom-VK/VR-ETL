@@ -107,14 +107,25 @@ async def _stream_reasoning_and_answer(prompt: str, model: str | None, temperatu
 
 
 
-def handle_search(query: str, tree_path: Path | None, model: str | None, temperature: float, search_model: str | None = None) -> SearchResponse:
+def handle_search(
+    query: str,
+    tree_path: Path | None,
+    model: str | None,
+    temperature: float | None,
+    search_model: str | None = None,
+    search_temperature: float | None = None,
+) -> SearchResponse:
     path = tree_path or DEFAULT_TREE_PATH
     logger.info("Service search query=%s tree=%s", query, path)
     try:
         tree = _load_tree(path)
         # search always uses reasoning_model; optional override
         effective_model = search_model or settings.reasoning_model
-        eff_temp = temperature if temperature is not None else settings.reasoning_temperature
+        eff_temp = (
+            search_temperature
+            if search_temperature is not None
+            else (temperature if temperature is not None else settings.reasoning_temperature)
+        )
         logger.info("Search using model=%s temp=%.2f", effective_model, eff_temp)
         result = search_tree_with_llm(query, tree, model=effective_model, temperature=eff_temp)
         node_map = _load_node_map(DEFAULT_NODE_MAP_PATH) or create_node_mapping(tree)
@@ -138,7 +149,16 @@ def handle_search(query: str, tree_path: Path | None, model: str | None, tempera
         raise HTTPException(status_code=500, detail=str(e))
 
 
-def handle_answer(query: str, tree_path: Path | None, model: str | None, temperature: float, search_model: str | None = None, answer_model: str | None = None) -> AnswerResponse:
+def handle_answer(
+    query: str,
+    tree_path: Path | None,
+    model: str | None,
+    temperature: float | None,
+    search_model: str | None = None,
+    answer_model: str | None = None,
+    search_temperature: float | None = None,
+    answer_temperature: float | None = None,
+) -> AnswerResponse:
     path = tree_path or DEFAULT_TREE_PATH
     logger.info("Service answer query=%s tree=%s", query, path)
     try:
@@ -146,8 +166,16 @@ def handle_answer(query: str, tree_path: Path | None, model: str | None, tempera
         node_map = _load_node_map(DEFAULT_NODE_MAP_PATH) or create_node_mapping(tree)
         effective_search_model = search_model or settings.reasoning_model
         effective_answer_model = answer_model or settings.chat_model
-        search_temp = temperature if temperature is not None else settings.reasoning_temperature
-        answer_temp = temperature if temperature is not None else settings.chat_temperature
+        search_temp = (
+            search_temperature
+            if search_temperature is not None
+            else (temperature if temperature is not None else settings.reasoning_temperature)
+        )
+        answer_temp = (
+            answer_temperature
+            if answer_temperature is not None
+            else (temperature if temperature is not None else settings.chat_temperature)
+        )
         logger.info("Answer search model=%s temp=%.2f; answer model=%s temp=%.2f", effective_search_model, search_temp, effective_answer_model, answer_temp)
         search_result, context, answer_text = answer_question(query, tree, model=effective_search_model, temperature=search_temp)
         nodes: List[SearchNode] = [
@@ -177,7 +205,16 @@ def handle_answer(query: str, tree_path: Path | None, model: str | None, tempera
         raise HTTPException(status_code=500, detail=str(e))
 
 
-def handle_answer_stream(query: str, tree_path: Path | None, model: str | None, temperature: float, search_model: str | None = None, answer_model: str | None = None):
+def handle_answer_stream(
+    query: str,
+    tree_path: Path | None,
+    model: str | None,
+    temperature: float | None,
+    search_model: str | None = None,
+    answer_model: str | None = None,
+    search_temperature: float | None = None,
+    answer_temperature: float | None = None,
+):
     path = tree_path or DEFAULT_TREE_PATH
     logger.info("Service answer_stream query=%s tree=%s", query, path)
     try:
@@ -185,8 +222,16 @@ def handle_answer_stream(query: str, tree_path: Path | None, model: str | None, 
         node_map = _load_node_map(DEFAULT_NODE_MAP_PATH) or create_node_mapping(tree)
         effective_search_model = search_model or settings.reasoning_model
         effective_answer_model = answer_model or settings.chat_model
-        search_temp = temperature if temperature is not None else settings.reasoning_temperature
-        answer_temp = temperature if temperature is not None else settings.chat_temperature
+        search_temp = (
+            search_temperature
+            if search_temperature is not None
+            else (temperature if temperature is not None else settings.reasoning_temperature)
+        )
+        answer_temp = (
+            answer_temperature
+            if answer_temperature is not None
+            else (temperature if temperature is not None else settings.chat_temperature)
+        )
         logger.info("Stream search model=%s temp=%.2f; answer model=%s temp=%.2f", effective_search_model, search_temp, effective_answer_model, answer_temp)
         search_result = search_tree_with_llm(query, tree, model=effective_search_model, temperature=search_temp)
         nodes: List[SearchNode] = [

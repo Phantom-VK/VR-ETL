@@ -11,10 +11,12 @@ class QueryRequest(BaseModel):
     tree_path: Optional[Path] = Field(
         default=None, description="Path to PageIndex tree JSON (defaults to data/processed/pageindex_tree.json)"
     )
-    model: Optional[str] = Field(default=None, description="Override model name (else uses env MODEL_NAME)")
+    model: Optional[str] = Field(default=None, description="Deprecated; use search_model/answer_model")
     search_model: Optional[str] = Field(default=None, description="Optional model for retrieval (else REASONING_MODEL)")
     answer_model: Optional[str] = Field(default=None, description="Optional model for final answer (else CHAT_MODEL)")
-    temperature: Optional[float] = Field(default=None, description="Override temperature (else use env defaults)")
+    temperature: Optional[float] = Field(default=None, description="Override both temps (else per-role defaults)")
+    search_temperature: Optional[float] = Field(default=None, description="Override search temp (else REASONING_TEMPERATURE)")
+    answer_temperature: Optional[float] = Field(default=None, description="Override answer temp (else CHAT_TEMPERATURE)")
 
 
 class SearchNode(BaseModel):

@@ -18,6 +18,8 @@ async def chat(req: QueryRequest):
         req.temperature,
         search_model=req.search_model,
         answer_model=req.answer_model,
+        search_temperature=req.search_temperature,
+        answer_temperature=req.answer_temperature,
     )
     return StreamingResponse(generator, media_type="application/x-ndjson")
 
