@@ -23,12 +23,14 @@ Vectorless RAG ETL pipeline built around PageIndex to ingest PDFs and produce a 
    The default paths in `run_etl.py` point to `docs/State-of-the-Cyber-Security-Sector-in-Ireland-2022-Report.pdf` and write outputs under `data/processed/`.
 3) Logs: emitted to `logs/<dd_mm_YYYY_HH:MM>/<timestamp>.log` and stdout, via `src/utils/logger.py`.
 
-## How to run LLM tree search (retrieval primitive)
+## How to run the FastAPI backend (search + answer)
 Requires ETL outputs and generic LLM creds in `.env`.
 ```bash
-python run_llm.py
+uvicorn src.backend.api:app --reload
 ```
-Defaults: query "What are the conclusions in this document?", tree at `data/processed/pageindex_tree.json`. This calls the LLM to pick relevant node_ids, then prints the reasoning plus the selected nodes with page numbers/titles.
+Endpoints:
+- `POST /search` with JSON body `{ "query": "..." }` (optional `tree_path`, `model`, `temperature`). Returns reasoning + selected nodes with page numbers/titles.
+- `POST /answer` with same body fields; returns reasoning, selected nodes, context preview, and generated answer constrained to that context.
 
 ### Customizing paths/timeouts
 Edit `run_etl.py` or instantiate `PageIndexETLPipeline` directly:
