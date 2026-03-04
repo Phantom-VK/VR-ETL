@@ -31,6 +31,11 @@ uvicorn src.backend.api:app --reload
 Endpoints:
 - `POST /search` with JSON body `{ "query": "..." }` (optional `tree_path`, `model`, `temperature`). Returns reasoning + selected nodes with page numbers/titles.
 - `POST /answer` with same body fields; returns reasoning, selected nodes, context preview, and generated answer constrained to that context.
+- `POST /answer/stream` returns NDJSON: first meta line (thinking, nodes, context preview) then incremental `token` lines and a final `done`.
+
+### Minimal frontend
+- Static UI in `src/frontend/index.html` calls `/answer/stream`, shows reasoning/selected nodes, and streams the answer tokens live.
+- Run the backend, then open the HTML in a browser (or serve locally, e.g., `python -m http.server -d src/frontend 5500`). CORS is enabled on the API for local use.
 
 ### Customizing paths/timeouts
 Edit `run_etl.py` or instantiate `PageIndexETLPipeline` directly:

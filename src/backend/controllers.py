@@ -1,9 +1,10 @@
 from __future__ import annotations
 
 from fastapi import APIRouter
+from fastapi.responses import StreamingResponse
 
 from src.backend.models import QueryRequest, SearchResponse, AnswerResponse
-from src.backend.services import handle_search, handle_answer
+from src.backend.services import handle_search, handle_answer, handle_answer_stream
 
 router = APIRouter()
 
@@ -16,6 +17,12 @@ def search(req: QueryRequest):
 @router.post("/answer", response_model=AnswerResponse)
 def answer(req: QueryRequest):
     return handle_answer(req.query, req.tree_path, req.model, req.temperature)
+
+
+@router.post("/answer/stream")
+def answer_stream(req: QueryRequest):
+    generator = handle_answer_stream(req.query, req.tree_path, req.model, req.temperature)
+    return StreamingResponse(generator, media_type="application/x-ndjson")
 
 
 __all__ = ["router"]
