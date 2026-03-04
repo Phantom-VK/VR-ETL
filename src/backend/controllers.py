@@ -20,7 +20,7 @@ def answer(req: QueryRequest):
 
 
 @router.post("/answer/stream")
-def answer_stream(req: QueryRequest):
+async def answer_stream(req: QueryRequest):
     generator = handle_answer_stream(req.query, req.tree_path, req.model, req.temperature)
     return StreamingResponse(generator, media_type="application/x-ndjson")
 

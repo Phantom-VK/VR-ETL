@@ -1,8 +1,9 @@
 from __future__ import annotations
 
+import asyncio
 import json
 from pathlib import Path
-from typing import Any, List
+from typing import Any, Dict, List, Tuple
 
 from fastapi import HTTPException
 
@@ -32,6 +33,63 @@ def _load_node_map(node_map_path: Path) -> Dict[str, Any] | None:
     except Exception:
         logger.warning("Failed to load node_map from %s; falling back to rebuild", node_map_path)
         return None
+
+
+async def _stream_reasoning_and_answer(prompt: str, model: str | None, temperature: float):
+    """Split streamed tokens into reasoning (<think>...</think>) and answer tokens."""
+    loop = asyncio.get_event_loop()
+    queue: asyncio.Queue[str | None] = asyncio.Queue()
+
+    def worker():
+        try:
+            for chunk in call_llm_stream(prompt, model=model, temperature=temperature):
+                asyncio.run_coroutine_threadsafe(queue.put(chunk), loop)
+        finally:
+            asyncio.run_coroutine_threadsafe(queue.put(None), loop)
+
+    import threading
+
+    threading.Thread(target=worker, daemon=True).start()
+
+    buffer = ""
+    in_think = False
+
+    while True:
+        token = await queue.get()
+        if token is None:
+            break
+        buffer += token
+
+        while True:
+            if in_think:
+                end = buffer.find("</think>")
+                if end != -1:
+                    reason_chunk = buffer[:end]
+                    if reason_chunk:
+                        yield {"type": "reason", "text": reason_chunk}
+                    buffer = buffer[end + len("</think>"):]
+                    in_think = False
+                else:
+                    if buffer:
+                        yield {"type": "reason", "text": buffer}
+                        buffer = ""
+                    break
+            else:
+                start = buffer.find("<think>")
+                if start != -1:
+                    # emit any answer text before think
+                    if start > 0:
+                        ans_chunk = buffer[:start]
+                        if ans_chunk:
+                            yield {"type": "answer", "text": ans_chunk}
+                    buffer = buffer[start + len("<think>"):]
+                    in_think = True
+                else:
+                    if buffer:
+                        yield {"type": "answer", "text": buffer}
+                        buffer = ""
+                    break
+
 
 
 def handle_search(query: str, tree_path: Path | None, model: str | None, temperature: float) -> SearchResponse:
@@ -132,13 +190,13 @@ Provide a clear, concise answer based only on the context provided.
             "context_preview": context[:1000] + ("..." if len(context) > 1000 else ""),
         }
 
-        def generator():
+        async def async_stream():
             yield json.dumps(meta) + "\n"
-            for chunk in call_llm_stream(prompt, model=model, temperature=temperature):
-                yield json.dumps({"type": "token", "text": chunk}) + "\n"
+            async for evt in _stream_reasoning_and_answer(prompt, model, temperature):
+                yield json.dumps(evt) + "\n"
             yield json.dumps({"type": "done"}) + "\n"
 
-        return generator()
+        return async_stream()
     except FileNotFoundError as e:
         raise HTTPException(status_code=400, detail=str(e))
     except Exception as e:  # noqa: BLE001

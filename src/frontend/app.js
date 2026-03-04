@@ -52,7 +52,12 @@ async function streamAnswer() {
           thinkingEl.textContent = evt.thinking || '(no reasoning)';
           nodesEl.textContent = renderNodes(evt.nodes);
           setStatus('Streaming answer ...');
+        } else if (evt.type === 'reason') {
+          thinkingEl.textContent += evt.text;
+        } else if (evt.type === 'answer') {
+          answerEl.textContent += evt.text;
         } else if (evt.type === 'token') {
+          // backward compatibility
           answerEl.textContent += evt.text;
         } else if (evt.type === 'done') {
           setStatus('Done');
