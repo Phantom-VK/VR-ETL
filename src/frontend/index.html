@@ -25,18 +25,18 @@
         <select id="answerModel"></select>
       </div>
       <div>
-        <label for="question">Question</label>
-        <textarea id="question" rows="4" placeholder="Ask about the Cyber Ireland 2022 report...">What are the conclusions in this document?</textarea>
+        <label for="temperatureSearch">Search Temperature (default 0.1)</label>
+        <input id="temperatureSearch" type="number" step="0.1" value="0.1" />
       </div>
     </div>
     <div class="row">
       <div>
-        <label for="temperatureSearch">Search Temperature (default 0.1)</label>
-        <input id="temperatureSearch" type="number" step="0.1" value="0.1" />
-      </div>
-      <div>
         <label for="temperatureAnswer">Answer Temperature (default 0.2)</label>
         <input id="temperatureAnswer" type="number" step="0.1" value="0.2" />
+      </div>
+      <div>
+        <label for="question">Question</label>
+        <textarea id="question" rows="4" placeholder="Ask about the Cyber Ireland 2022 report...">What are the conclusions in this document?</textarea>
       </div>
     </div>
     <div class="small" style="margin-top:8px;">Uses default tree at <code>data/processed/pageindex_tree.json</code></div>
