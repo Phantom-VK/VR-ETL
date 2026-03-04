@@ -7,6 +7,7 @@ Vectorless RAG ETL pipeline built around PageIndex to ingest PDFs and produce a 
 - Virtual env (`python -m venv .venv`) and activate it.
 - Install deps: `pip install -r requirements.txt`.
 - Secrets: set `PAGEINDEX_API_KEY` (required) and `OPENAI_API_KEY` (not used in ETL but required for downstream agent). Copy `.env.example` → `.env` and fill values, or export in your shell.
+- DeepSeek LLM (reasoner) for retrieval steps: set `DEEPSEEK_API_KEY` and `DEEPSEEK_BASE_URL` (default `https://api.deepseek.com`).
 
 ## ETL Outputs (knowledge base artifacts)
 - `data/processed/doc_id.txt` – PageIndex doc identifier.
@@ -44,6 +45,7 @@ pipeline.run()
 - `src/etl/build_tree.py` – polls readiness, fetches PageIndex tree JSON.
 - `src/etl/build_node_map.py` – flattens tree into node map.
 - `src/etl/pipeline.py` – orchestrates the full ETL.
+- `src/backend/llm.py` – `call_llm(prompt, model, temperature)` wrapper over DeepSeek/OpenAI-compatible Chat Completions.
 - `src/utils/logger.py` – shared logging (file + stdout).
 - `src/utils/exception.py` – custom exception with filename/line capture.
 

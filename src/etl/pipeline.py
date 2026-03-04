@@ -18,6 +18,14 @@ class PageIndexETLPipeline:
     """
     Pipeline that wraps PageIndex operations.
     PDF ingestion -> PageIndex Tree Retrieval -> Node Map Generation
+
+    Attributes:
+        pdf_path: Path to PDF / knowledge source
+        doc_id_path: Path to Document ID returned by PageIndex
+        tree_path: Path to the json file, where generated tree will be stored
+        node_map_path: Path to the json file, where generated node map will be stored
+        poll_interval: Time interval after which, we will check if tree is ready or not
+        timeout: Time to wait for page to finish
     """
 
     pdf_path: Path
