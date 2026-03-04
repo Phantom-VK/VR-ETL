@@ -23,6 +23,13 @@ Vectorless RAG ETL pipeline built around PageIndex to ingest PDFs and produce a 
    The default paths in `run_etl.py` point to `docs/State-of-the-Cyber-Security-Sector-in-Ireland-2022-Report.pdf` and write outputs under `data/processed/`.
 3) Logs: emitted to `logs/<dd_mm_YYYY_HH:MM>/<timestamp>.log` and stdout, via `src/utils/logger.py`.
 
+## How to run LLM tree search (retrieval primitive)
+Requires ETL outputs and DeepSeek creds in `.env`.
+```bash
+python run_llm.py --query "What are the conclusions in this document?" --tree data/processed/pageindex_tree.json
+```
+This calls the LLM to pick relevant node_ids, then prints the reasoning plus the selected nodes with page numbers/titles.
+
 ### Customizing paths/timeouts
 Edit `run_etl.py` or instantiate `PageIndexETLPipeline` directly:
 ```python
@@ -46,6 +53,7 @@ pipeline.run()
 - `src/etl/build_node_map.py` – flattens tree into node map.
 - `src/etl/pipeline.py` – orchestrates the full ETL.
 - `src/backend/llm.py` – `call_llm(prompt, model, temperature)` wrapper over DeepSeek/OpenAI-compatible Chat Completions.
+- `src/backend/retrieval.py` – LLM-driven tree search helpers (strip text, map nodes, format output).
 - `src/utils/logger.py` – shared logging (file + stdout).
 - `src/utils/exception.py` – custom exception with filename/line capture.
 
