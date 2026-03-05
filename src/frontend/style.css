@@ -611,3 +611,73 @@ strong { color: var(--cyan); font-weight: 500; }
   .ticker-steps { display: none; }
   .chat-shell { padding: 0 10px; }
 }
+
+
+.cite-chip {
+      display: inline-block;
+      padding: 1px 6px;
+      border-radius: 4px;
+      font-size: 0.72em;
+      font-weight: 600;
+      letter-spacing: 0.03em;
+      background: color-mix(in srgb, var(--accent, #6ee7b7) 15%, transparent);
+      color: var(--accent, #6ee7b7);
+      border: 1px solid color-mix(in srgb, var(--accent, #6ee7b7) 35%, transparent);
+      vertical-align: middle;
+      margin: 0 2px;
+      cursor: default;
+    }
+
+    /* ── Mermaid diagram wrapper ── */
+    .mermaid-diagram {
+      margin: 12px 0;
+      padding: 16px;
+      background: rgba(255,255,255,0.03);
+      border: 1px solid rgba(255,255,255,0.08);
+      border-radius: 8px;
+      overflow-x: auto;
+      text-align: center;
+    }
+
+    /* ── KaTeX display math block ── */
+    .katex-display {
+      margin: 10px 0;
+      overflow-x: auto;
+    }
+
+    /* ── Markdown inside bubbles ── */
+    .reason-text p,
+    .answer-text p { margin: 4px 0 8px; }
+
+    .reason-text ul,
+    .reason-text ol,
+    .answer-text ul,
+    .answer-text ol {
+      padding-left: 20px;
+      margin: 6px 0;
+    }
+
+    .reason-text li,
+    .answer-text li { margin: 3px 0; }
+
+    .reason-text strong,
+    .answer-text strong { color: #fff; }
+
+    .reason-text code,
+    .answer-text code {
+      background: rgba(255,255,255,0.08);
+      padding: 1px 5px;
+      border-radius: 3px;
+      font-family: 'Fira Code', monospace;
+      font-size: 0.88em;
+    }
+
+    .reason-text pre,
+    .answer-text pre {
+      background: rgba(0,0,0,0.35);
+      border: 1px solid rgba(255,255,255,0.08);
+      border-radius: 6px;
+      padding: 12px;
+      overflow-x: auto;
+      margin: 8px 0;
+    }
