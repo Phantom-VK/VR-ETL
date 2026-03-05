@@ -36,7 +36,10 @@ def _load_node_map(node_map_path: Path = DEFAULT_NODE_MAP_PATH) -> Dict[str, Any
 def handle_pageindex_combined_stream(
     query: str,
     doc_id: str | None = None,
+    search_temperature: float | None = None,
+    answer_temperature: float | None = None,
     enable_citations: bool = False,
+    answer_model: str | None = None,
 ):
     """Use PageIndex to pick nodes, then stream reasoning+answer from the reasoning model."""
     try:
@@ -61,9 +64,9 @@ Directly return the final JSON structure. Do not output anything else.
 
         search_text_chunks: list[str] = []
         for chunk in pageindex_chat_stream(
-            [{"role": "user", "content": search_prompt}],
+            messages=[{"role": "user", "content": search_prompt}],
             doc_id=resolved_doc_id,
-            temperature=0.1,
+            temperature=search_temperature if search_temperature is not None else 0.1,
             enable_citations=enable_citations,
         ):
             if isinstance(chunk, dict):
@@ -79,13 +82,15 @@ Directly return the final JSON structure. Do not output anything else.
         node_list: List[str] = []
         try:
             parsed = None
-            try:
-                parsed = json.loads(full_search)
-            except json.JSONDecodeError:
-                start = full_search.find("{")
-                end = full_search.rfind("}")
-                if start != -1 and end != -1 and end > start:
-                    parsed = json.loads(full_search[start : end + 1])
+            # Drop leading doc_name line if present
+            lines = [ln for ln in full_search.splitlines() if not ln.strip().startswith("```")]
+            if lines and lines[0].startswith('{"doc_name"'):
+                lines = lines[1:]
+            cleaned = "\n".join(lines)
+            start = cleaned.find("{")
+            end = cleaned.rfind("}")
+            if start != -1 and end != -1 and end > start:
+                parsed = json.loads(cleaned[start : end + 1])
             if parsed:
                 thinking = parsed.get("thinking", "")
                 node_list = parsed.get("node_list", []) or []
@@ -99,36 +104,39 @@ Directly return the final JSON structure. Do not output anything else.
         for nid in node_list:
             node = node_map.get(nid, {})
             if not node:
+                logger.warning("Node id %s not found in node_map; skipping", nid)
                 continue
+            page = node.get("page_index")
             nodes.append(
                 {
                     "node_id": nid,
                     "title": node.get("title"),
-                    "page_index": node.get("page_index"),
-                    "citation": f"page {node.get('page_index')}" if node.get("page_index") is not None else None,
+                    "page_index": page,
+                    "citation": f"<page={page}>" if page is not None else None,
                 }
             )
             text = node.get("text")
             if text:
-                context_parts.append(text)
+                prefix = f"[page {page}] " if page is not None else ""
+                context_parts.append(prefix + text)
         context = "\n\n".join(context_parts)
 
         # 3) Stream reasoning+answer from reasoning model
         answer_prompt = f"""
-                    Answer the question based on the context:
-                    
-                    Question: {query}
-                    Context: {context}
-                    
-                    Provide a clear, concise answer based only on the context provided.
-                    Do the mathematical calculations accurately, recheck the answers.
-                    
-                    First 
-            """
-        model_to_use = settings.reasoning_model or settings.chat_model
+Answer the question based on the context:
+
+Question: {query}
+Context: {context}
+
+Provide a clear, concise answer based only on the context provided.
+Do the mathematical calculations accurately, recheck the answers.
+Always mention page numbers as <page=PAGE_NUMBER> when citing evidence.
+"""
+        model_to_use = answer_model or settings.reasoning_model or settings.chat_model
+        ans_temp = answer_temperature if answer_temperature is not None else 0.2
 
         def answer_stream():
-            for evt in call_llm_stream(answer_prompt, model=model_to_use, temperature=0.2):
+            for evt in call_llm_stream(answer_prompt, model=model_to_use, temperature=ans_temp):
                 yield evt
 
         async def async_stream():

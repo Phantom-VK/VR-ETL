@@ -26,7 +26,7 @@ def load_doc_id(doc_id: str | None) -> str:
 
 
 def pageindex_chat_stream(
-    messages: Iterable[Dict[str, str]],
+    messages: list[Dict[str, str]],
     doc_id: str | None = None,
     temperature: float | None = None,
     enable_citations: bool = False,
@@ -36,15 +36,16 @@ def pageindex_chat_stream(
     resolved_doc_id = load_doc_id(doc_id)
     client = PageIndexClient(api_key=settings.pageindex_api_key)
     logger.info(
-        "Streaming PageIndex chat API doc_id=%s enable_citations=%s",
+        "Streaming PageIndex chat API doc_id=%s temp=%s citations=%s",
         resolved_doc_id,
+        temperature,
         enable_citations,
     )
     for chunk in client.chat_completions(
-        messages=list(messages),
+        messages=messages,
         doc_id=resolved_doc_id,
         stream=True,
-        stream_metadata=enable_citations,
+        enable_citations=enable_citations,
         temperature=temperature,
     ):
         yield chunk

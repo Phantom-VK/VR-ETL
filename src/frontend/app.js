@@ -1,30 +1,23 @@
+const API_BASE = 'http://localhost:8000';
 const runBtn = document.getElementById('runBtn');
 const statusEl = document.getElementById('status');
 const thinkingEl = document.getElementById('thinking');
-const nodesEl = document.getElementById('nodes');
 const answerEl = document.getElementById('answer');
-const docIdInput = document.getElementById('docId');
 
 function setStatus(msg) { statusEl.textContent = msg; }
-
-function renderNodes(nodes) {
-  if (!nodes || nodes.length === 0) return '(no nodes)';
-  return nodes.map(n => `• ${n.node_id}\tpage: ${n.page_index ?? '-'}\t${n.title ?? ''}`).join('\n');
-}
 
 async function streamAnswer() {
   try {
     runBtn.disabled = true;
     setStatus('Running ...');
     thinkingEl.textContent = '...';
-    nodesEl.textContent = '...';
     answerEl.textContent = '';
 
-    const apiBase = document.getElementById('apiBase').value;
-    const url = `${apiBase}/chat`;
+    const url = `${API_BASE}/chat`;
     const payload = {
       query: document.getElementById('question').value,
-      doc_id: docIdInput.value || null,
+      search_temperature: parseFloat(document.getElementById('searchTemp').value) || 0.1,
+      answer_temperature: parseFloat(document.getElementById('answerTemp').value) || 0.2,
       enable_citations: false,
     };
 
@@ -52,8 +45,7 @@ async function streamAnswer() {
         if (!line.trim()) continue;
         const evt = JSON.parse(line);
         if (evt.type === 'meta') {
-          thinkingEl.textContent = evt.thinking || '(no reasoning)';
-          nodesEl.textContent = renderNodes(evt.nodes);
+          thinkingEl.textContent = evt.thinking || '';
           setStatus('Streaming answer ...');
         } else if (evt.type === 'reason') {
           thinkingEl.textContent += evt.text;
