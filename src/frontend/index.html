@@ -3,56 +3,117 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>VR-ETL QA</title>
+  <title>VR-ETL · Agentic Chat</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600&family=Syne:wght@400;600;800&family=DM+Sans:ital,wght@0,300;0,400;0,500;1,300&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="style.css" />
 </head>
 <body>
-  <main class="layout">
-    <header class="card header">
-      <div>
-        <p class="eyebrow">VR-ETL Agent</p>
-        <h1>Query the Cyber Ireland 2022 Report</h1>
-        <p class="muted">Provide a question and watch the reasoning and answer stream live.</p>
-      </div>
-    </header>
 
-    <section class="card grid">
-      <div class="field">
-        <label for="searchTemp">PageIndex temperature (search)</label>
-        <input id="searchTemp" type="number" step="0.1" value="0.1" />
-      </div>
-      <div class="field">
-        <label for="answerTemp">DeepSeek reasoner temperature (answer)</label>
-        <input id="answerTemp" type="number" step="0.1" value="0.2" />
-      </div>
-    </section>
+  <!-- ═══════════════════════ STATUS TICKER (TOP) ═══════════════════════ -->
+  <div class="status-ticker">
+    <div class="ticker-label">AGENT</div>
+    <div class="ticker-track">
+      <div class="ticker-dot" id="tickerDot"></div>
+      <span id="tickerText">Ready — awaiting your query</span>
+    </div>
+    <div class="ticker-steps" id="tickerSteps">
+      <!-- pipeline step chips injected here -->
+    </div>
+  </div>
 
-    <section class="card">
-      <label for="question">Question</label>
-      <textarea id="question" rows="4" placeholder="Ask about the Cyber Ireland 2022 report...">What are the conclusions in this document?</textarea>
-      <div class="toolbar">
-        <span class="muted">Uses tree at data/processed/pageindex_tree.json</span>
-        <button id="runBtn">Run query</button>
+  <!-- ═══════════════════════ HEADER ═══════════════════════ -->
+  <header class="topbar">
+    <div class="topbar-brand">
+      <span class="brand-badge">VR-ETL</span>
+      <div>
+        <p class="eyebrow">Agentic RAG Interface</p>
+        <h1>Cyber Ireland 2022</h1>
       </div>
-      <div id="status" class="status">Ready</div>
-    </section>
+    </div>
 
-    <section class="card two-col">
-      <div>
-        <h2>Reasoning</h2>
-        <pre id="thinking" class="panel">(run a query to see reasoning)</pre>
+    <!-- Settings panel — top right -->
+    <div class="settings-panel">
+      <button class="settings-toggle" id="settingsToggle" title="Settings">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.07 4.93l-1.41 1.41M4.93 4.93l1.41 1.41M19.07 19.07l-1.41-1.41M4.93 19.07l1.41-1.41M12 2v2M12 20v2M2 12h2M20 12h2"/></svg>
+        Settings
+      </button>
+      <div class="settings-dropdown" id="settingsDropdown">
+        <div class="sd-header">Configuration</div>
+        <div class="sd-field">
+          <label for="searchTemp">
+            <span class="sd-icon">🔍</span>
+            PageIndex Temp <em>(search)</em>
+          </label>
+          <div class="sd-row">
+            <input type="range" id="searchTempRange" min="0" max="1" step="0.05" value="0.1">
+            <input id="searchTemp" type="number" step="0.05" min="0" max="1" value="0.1" />
+          </div>
+        </div>
+        <div class="sd-field">
+          <label for="answerTemp">
+            <span class="sd-icon">🧠</span>
+            DeepSeek Temp <em>(answer)</em>
+          </label>
+          <div class="sd-row">
+            <input type="range" id="answerTempRange" min="0" max="1" step="0.05" value="0.2">
+            <input id="answerTemp" type="number" step="0.05" min="0" max="1" value="0.2" />
+          </div>
+        </div>
+        <div class="sd-field">
+          <label>
+            <span class="sd-icon">💬</span>
+            Chat Mode
+          </label>
+          <div class="sd-toggle-group">
+            <button class="sd-toggle active" data-mode="single">Single Turn</button>
+            <button class="sd-toggle" data-mode="multi" title="Coming soon">Multi Turn</button>
+          </div>
+        </div>
+        <p class="sd-note">Multi-turn with history will preserve context across queries.</p>
       </div>
-      <div>
-        <h2>Answer</h2>
-        <pre id="answer" class="panel">(waiting)</pre>
+    </div>
+  </header>
+
+  <!-- ═══════════════════════ MAIN CHAT AREA ═══════════════════════ -->
+  <main class="chat-shell">
+
+    <!-- Chat history scrollable -->
+    <div class="chat-log" id="chatLog">
+      <div class="msg assistant">
+        <div class="avatar ai-avatar">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg>
+        </div>
+        <div class="bubble">
+          <div class="bubble-meta">VR-ETL Agent</div>
+          Ask a question about the <strong>Cyber Ireland 2022</strong> report. I'll stream my reasoning, then deliver the final answer.
+        </div>
       </div>
-    </section>
+    </div>
+
+    <!-- Composer — always at bottom -->
+    <div class="composer-wrap">
+      <div class="composer">
+        <textarea
+          id="question"
+          rows="1"
+          placeholder="Ask anything about the report…"
+          autocomplete="off"
+          spellcheck="true"
+        ></textarea>
+        <button id="runBtn" class="send-btn" title="Send (Ctrl+Enter)">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+        </button>
+      </div>
+      <p class="composer-hint">Press <kbd>Ctrl</kbd>+<kbd>Enter</kbd> to send · Powered by DeepSeek Reasoner + VR-ETL</p>
+    </div>
+
   </main>
 
   <script src="app.js"></script>
   <script type="module">
-    import mermaid from \"https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.esm.min.mjs\";
-    mermaid.initialize({ startOnLoad: true, theme: \"dark\" });
+    import mermaid from "https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.esm.min.mjs";
+    mermaid.initialize({ startOnLoad: true, theme: "dark" });
   </script>
 </body>
 </html>
