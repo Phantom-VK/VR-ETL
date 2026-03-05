@@ -1,8 +1,14 @@
 from __future__ import annotations
 
 from typing import Dict, Any
+import sys
 
 import sympy as sp
+from sympy.parsing.sympy_parser import (
+    parse_expr,
+    standard_transformations,
+    implicit_multiplication_application,
+)
 
 from src.utils.exception import VRETLException
 from src.utils.logger import logger
@@ -59,16 +65,15 @@ def run_math_tool(expression: str, precision: int = 4) -> str:
         if not expression or len(expression) > 200:
             raise ValueError("Expression too long or empty")
         precision = min(max(int(precision), 2), 10)
-        expr = sp.sympify(expression, locals=_ALLOWED_FUNCS)
+        transformations = standard_transformations + (implicit_multiplication_application,)
+        expr = parse_expr(expression, local_dict=_ALLOWED_FUNCS, transformations=transformations)
         val = expr.evalf(precision)
         result = f"{val}"
         logger.info("math_tool expression='%s' -> %s", expression, result)
         return result
     except Exception as exc:  # noqa: BLE001
         logger.exception("math_tool failed for expression='%s'", expression)
-        import sys as _sys
-
-        raise VRETLException(str(exc), _sys) from exc
+        raise VRETLException(str(exc), sys) from exc
 
 
 __all__ = ["MATH_TOOL", "run_math_tool"]

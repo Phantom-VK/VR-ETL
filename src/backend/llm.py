@@ -84,4 +84,4 @@ def call_llm_tools(
         raise VRETLException(str(exc), sys) from exc
 
 
-__all__ = ["call_llm_stream"]
+__all__ = ["call_llm_stream", "call_llm_tools"]

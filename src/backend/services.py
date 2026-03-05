@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import sys
+import asyncio
 from typing import List, Optional
 
 from fastapi import HTTPException
@@ -104,24 +105,30 @@ def handle_pageindex_combined_stream(
                     tool_call.get("tool_name") == "evaluate_math"
                     and tool_call.get("arguments")
                 ):
-                    tool_args = json.loads(tool_call["arguments"])
-                    expression = tool_args.get("expression")
-                    precision  = tool_args.get("precision", 4)
+                    try:
+                        tool_args = json.loads(tool_call["arguments"])
+                    except json.JSONDecodeError as e:
+                        logger.warning("Math tool returned invalid JSON args: %s", e)
+                        tool_args = None
+                        tool_result = None
+                    if tool_args:
+                        expression = tool_args.get("expression")
+                        precision  = tool_args.get("precision", 4)
 
-                    if expression:
-                        tool_result = run_math_tool(expression, precision)
-                        logger.info(
-                            "Math tool OK | expr='%s' -> result='%s'",
-                            expression, tool_result,
-                        )
-                    else:
-                        logger.warning("Math tool called but expression was empty; skipping.")
+                        if expression:
+                            tool_result = run_math_tool(expression, precision)
+                            logger.info(
+                                "Math tool OK | expr='%s' -> result='%s'",
+                                expression, tool_result,
+                            )
+                        else:
+                            logger.warning("Math tool called but expression was empty; skipping.")
                 else:
                     logger.info("LLM did not invoke the math tool (expression not required).")
 
             except Exception as tool_exc:  # noqa: BLE001
-                logger.warning(
-                    "Math tool step failed; continuing without it. err=%s", tool_exc
+                logger.error(
+                    "Math tool step failed; continuing without it. err=%s", tool_exc, exc_info=True
                 )
 
         # Build final prompt based on branch outcome
@@ -156,11 +163,9 @@ def handle_pageindex_combined_stream(
 
         # Stream the final answer
         model_to_use = answer_model or settings.reasoning_model or settings.chat_model
+        if not model_to_use:
+            raise HTTPException(status_code=500, detail="No LLM model configured. Set reasoning_model or chat_model.")
         ans_temp     = answer_temperature if answer_temperature is not None else 0.2
-
-        def _sync_answer_stream():
-            """Thin wrapper — yields raw stream events from the LLM."""
-            yield from call_llm_stream(final_prompt, model=model_to_use, temperature=ans_temp)
 
         async def async_stream():
             logger.info("Streaming answer | model=%s temp=%.2f", model_to_use, ans_temp)
@@ -185,7 +190,21 @@ def handle_pageindex_combined_stream(
                 }) + "\n"
 
             # LLM answer stream (reason + answer chunks from call_llm_stream)
-            for evt in _sync_answer_stream():
+            loop = asyncio.get_event_loop()
+            queue: asyncio.Queue = asyncio.Queue()
+
+            def producer():
+                try:
+                    for evt in call_llm_stream(final_prompt, model=model_to_use, temperature=ans_temp):
+                        loop.call_soon_threadsafe(queue.put_nowait, evt)
+                finally:
+                    loop.call_soon_threadsafe(queue.put_nowait, None)
+
+            loop.run_in_executor(None, producer)
+            while True:
+                evt = await queue.get()
+                if evt is None:
+                    break
                 yield json.dumps(evt) + "\n"
 
             yield json.dumps({"type": "done"}) + "\n"

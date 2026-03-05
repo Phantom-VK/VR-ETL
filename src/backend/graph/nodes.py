@@ -47,7 +47,12 @@ def _parse_pageindex_search_output(text: str) -> tuple[str, List[str], bool, Lis
             node_list = parsed.get("node_list", []) or []
             require_math = bool(parsed.get("require_math", False))
             citations = parsed.get("citations", []) or []
-    except Exception:
+    except Exception as e:
+        logger.warning(
+            "Failed to parse PageIndex output. Raw(first 300)=%s err=%s",
+            text[:300],
+            e,
+        )
         thinking = ""
         node_list = []
     return thinking, node_list, require_math, citations
@@ -57,7 +62,7 @@ def retrieve_node(state: ChatState) -> ChatState:
     """Use PageIndex to select nodes and assemble context from node_map."""
     try:
         query = state.get("query", "")
-        search_temp = state.get("search_temperature", 0.1)
+        search_temp = state.get("search_temperature") or 0.1
         enable_citations = state.get("enable_citations", False)
         resolved_doc_id = load_doc_id(state.get("doc_id"))
         node_map = _load_node_map() or {}
