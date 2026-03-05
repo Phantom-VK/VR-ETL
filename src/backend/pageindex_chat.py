@@ -29,7 +29,6 @@ def pageindex_chat_stream(
     messages: list[Dict[str, str]],
     doc_id: str | None = None,
     temperature: float | None = None,
-    enable_citations: bool = False,
 ):
     """Stream chat_completions from PageIndex."""
     settings.validate(require_pageindex=True, require_generic_llm=False)
@@ -37,16 +36,16 @@ def pageindex_chat_stream(
     try:
         client = PageIndexClient(api_key=settings.pageindex_api_key)
         logger.info(
-            "Streaming PageIndex chat API doc_id=%s temp=%s citations=%s",
+            "Getting nodes from PageIndex chat API doc_id=%s temp=%s citations=%s",
             resolved_doc_id,
             temperature,
-            enable_citations,
+            True,
         )
         for chunk in client.chat_completions(
             messages=messages,
             doc_id=resolved_doc_id,
             stream=True,
-            enable_citations=enable_citations,
+            enable_citations=True,
             temperature=temperature,
         ):
             yield chunk
