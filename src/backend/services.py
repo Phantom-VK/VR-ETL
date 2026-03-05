@@ -129,6 +129,9 @@ def handle_pageindex_combined_stream(
                             logger.info("Math tool OK | expr='%s' -> result='%s'", expression, tool_result)
                         else:
                             logger.warning("Math tool called but expression was empty; skipping.")
+                    # DeepSeek requires reasoning_content present on assistant messages with tool_calls
+                    if "reasoning_content" not in assistant_msg_dict:
+                        assistant_msg_dict["reasoning_content"] = ""
                     tool_call_message = assistant_msg_dict
                     if tool_result is not None:
                         tool_result_message = {
