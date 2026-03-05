@@ -45,20 +45,19 @@ def handle_pageindex_combined_stream(
 
         # 1) PageIndex search (no reasoning streamed to client)
         search_prompt = f"""
-You are given a question and have a tree structure of a document.
-Each node contains a node id, node title, and a corresponding summary.
-Your task is to find all nodes that are likely to contain the answer to the question.
-
-Question: {query}
-
-Please reply in the following JSON format:
-{{
-    "thinking": "<Your thinking process on which nodes are relevant to the question>",
-    "node_list": ["node_id_1", "node_id_2", ..., "node_id_n"]
-}}
-Only return node_id values that appear in the tree. Do not invent node_ids.
-Directly return the final JSON structure. Do not output anything else.
-"""
+            You are given a question and have a tree structure of a document.
+            Each node contains a node id, node title, and a corresponding summary.
+            Your task is to find all nodes that are likely to contain the answer to the question.
+            
+            Question: {query}
+            
+            Please reply in the following JSON format:
+            {{
+                "node_list": ["node_id_1", "node_id_2", ..., "node_id_n"]
+            }}
+            Only return node_id values that appear in the tree. Do not invent node_ids.
+            Directly return the final JSON structure. Do not output anything else.
+        """
 
         search_text_chunks: list[str] = []
         meta_events: list[Dict[str, Any]] = []
@@ -120,48 +119,21 @@ Directly return the final JSON structure. Do not output anything else.
 
         # 3) Stream reasoning+answer from reasoning model
         answer_prompt = f"""
-Answer the question based on the context:
-
-Question: {query}
-Context: {context}
-
-Provide a clear, concise answer based only on the context provided.
-"""
+                    Answer the question based on the context:
+                    
+                    Question: {query}
+                    Context: {context}
+                    
+                    Provide a clear, concise answer based only on the context provided.
+                    Do the mathematical calculations accurately, recheck the answers.
+                    
+                    First 
+            """
         model_to_use = settings.reasoning_model or settings.chat_model
 
         def answer_stream():
-            buffer = ""
-            in_think = False
-            for tok in call_llm_stream(answer_prompt, model=model_to_use, temperature=0.2):
-                buffer += tok
-                while True:
-                    if in_think:
-                        end = buffer.find("</think>")
-                        if end != -1:
-                            chunk = buffer[:end]
-                            if chunk:
-                                yield {"type": "reason", "text": chunk}
-                            buffer = buffer[end + len("</think>"):]
-                            in_think = False
-                        else:
-                            if buffer:
-                                yield {"type": "reason", "text": buffer}
-                                buffer = ""
-                            break
-                    else:
-                        start = buffer.find("<think>")
-                        if start != -1:
-                            if start > 0:
-                                chunk = buffer[:start]
-                                if chunk:
-                                    yield {"type": "answer", "text": chunk}
-                            buffer = buffer[start + len("<think>"):]
-                            in_think = True
-                        else:
-                            if buffer:
-                                yield {"type": "answer", "text": buffer}
-                                buffer = ""
-                            break
+            for evt in call_llm_stream(answer_prompt, model=model_to_use, temperature=0.2):
+                yield evt
 
         async def async_stream():
             yield json.dumps(

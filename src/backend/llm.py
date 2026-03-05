@@ -12,7 +12,10 @@ from src.utils.exception import VRETLException
 
 
 def call_llm_stream(prompt: str, model: Optional[str] = None, temperature: float = 0.0, base_url: Optional[str] = None):
-    """Stream tokens from the chat completion API (generator of text chunks)."""
+    """Stream reasoning and answer tokens separately.
+
+    Yields dict events: {"type": "reason"|"answer", "text": str}
+    """
     try:
         settings.validate(require_pageindex=False, require_generic_llm=True)
         api_key = settings.api_key
@@ -30,20 +33,11 @@ def call_llm_stream(prompt: str, model: Optional[str] = None, temperature: float
             if not chunk.choices:
                 continue
             delta = chunk.choices[0].delta
-            content = getattr(delta, "content", None)
-            if not content:
-                continue
-            if isinstance(content, str):
-                yield content
-            elif isinstance(content, list):
-                parts = []
-                for part in content:
-                    if hasattr(part, "text"):
-                        parts.append(part.text)
-                    elif isinstance(part, dict) and "text" in part:
-                        parts.append(part["text"])
-                if parts:
-                    yield "".join(parts)
+            # DeepSeek reasoner: reasoning_content first, then content
+            if getattr(delta, "reasoning_content", None):
+                yield {"type": "reason", "text": delta.reasoning_content}
+            elif getattr(delta, "content", None):
+                yield {"type": "answer", "text": delta.content}
     except Exception as exc:  # noqa: BLE001
         raise VRETLException(str(exc), sys) from exc
 
