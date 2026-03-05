@@ -3,10 +3,8 @@ const statusEl = document.getElementById('status');
 const thinkingEl = document.getElementById('thinking');
 const nodesEl = document.getElementById('nodes');
 const answerEl = document.getElementById('answer');
-const searchModelSel = document.getElementById('searchModel');
-const answerModelSel = document.getElementById('answerModel');
-const temperatureSearch = document.getElementById('temperatureSearch');
-const temperatureAnswer = document.getElementById('temperatureAnswer');
+const docIdInput = document.getElementById('docId');
+const streamMetadata = document.getElementById('streamMetadata');
 
 function setStatus(msg) { statusEl.textContent = msg; }
 
@@ -18,34 +16,27 @@ function renderNodes(nodes) {
 async function streamAnswer() {
   try {
     runBtn.disabled = true;
-    setStatus('Running /answer/stream ...');
+    setStatus('Running ...');
     thinkingEl.textContent = '...';
     nodesEl.textContent = '...';
     answerEl.textContent = '';
 
-    const body = {
+    const apiBase = document.getElementById('apiBase').value;
+    const url = `${apiBase}/chat`;
+    const payload = {
       query: document.getElementById('question').value,
-      search_model: searchModelSel.value || null,
-      answer_model: answerModelSel.value || null,
-      // pass both temps; backend uses reasoning temp for search and chat temp for answer
-      temperature: null, // we send explicit per-role temps below
+      doc_id: docIdInput.value || null,
+      stream_metadata: streamMetadata.checked,
     };
 
-        const res = await fetch(`${document.getElementById('apiBase').value}/chat`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Accept': 'application/x-ndjson'
-          },
-          body: JSON.stringify({
-            ...body,
-            search_model: searchModelSel.value || null,
-            answer_model: answerModelSel.value || null,
-            temperature: null,
-            search_temperature: parseFloat(temperatureSearch.value) || 0.1,
-            answer_temperature: parseFloat(temperatureAnswer.value) || 0.2,
-          }),
-        });
+    const res = await fetch(url, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Accept': 'application/x-ndjson'
+      },
+      body: JSON.stringify(payload),
+    });
     if (!res.ok || !res.body) throw new Error(await res.text());
 
     const reader = res.body.getReader();
@@ -69,6 +60,8 @@ async function streamAnswer() {
           thinkingEl.textContent += evt.text;
         } else if (evt.type === 'answer') {
           answerEl.textContent += evt.text;
+        } else if (evt.type === 'metadata') {
+          thinkingEl.textContent += `\n[meta] ${JSON.stringify(evt.metadata)}`;
         } else if (evt.type === 'token') {
           // backward compatibility
           answerEl.textContent += evt.text;
@@ -94,24 +87,3 @@ async function streamAnswer() {
 }
 
 runBtn.addEventListener('click', streamAnswer);
-
-// Populate model dropdowns with defaults and empty option to use server defaults
-function initModels() {
-  const defaults = [
-    { label: 'Use REASONING_MODEL (env)', value: '' },
-    { label: 'reasoning-model', value: 'reasoning-model' },
-    { label: 'chat-model', value: 'chat-model' },
-  ];
-  defaults.forEach(opt => {
-    const o1 = document.createElement('option');
-    o1.value = opt.value;
-    o1.textContent = opt.label;
-    searchModelSel.appendChild(o1.cloneNode(true));
-    const o2 = document.createElement('option');
-    o2.value = opt.value;
-    o2.textContent = opt.label === 'Use REASONING_MODEL (env)' ? 'Use CHAT_MODEL (env)' : opt.label;
-    answerModelSel.appendChild(o2);
-  });
-}
-
-initModels();
