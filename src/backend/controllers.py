@@ -14,7 +14,7 @@ async def chat(req: ChatRequest):
     generator = handle_pageindex_combined_stream(
         query=req.query,
         doc_id=req.doc_id,
-        stream_metadata=req.stream_metadata,
+        enable_citations=req.enable_citations,
     )
     return StreamingResponse(generator, media_type="application/x-ndjson")
 

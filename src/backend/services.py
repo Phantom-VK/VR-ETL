@@ -36,7 +36,7 @@ def _load_node_map(node_map_path: Path = DEFAULT_NODE_MAP_PATH) -> Dict[str, Any
 def handle_pageindex_combined_stream(
     query: str,
     doc_id: str | None = None,
-    stream_metadata: bool = False,
+    enable_citations: bool = False,
 ):
     """Use PageIndex to pick nodes, then stream reasoning+answer from the reasoning model."""
     try:
@@ -45,32 +45,28 @@ def handle_pageindex_combined_stream(
 
         # 1) PageIndex search (no reasoning streamed to client)
         search_prompt = f"""
-            You are given a question and have a tree structure of a document.
-            Each node contains a node id, node title, and a corresponding summary.
-            Your task is to find all nodes that are likely to contain the answer to the question.
-            
-            Question: {query}
-            
-            Please reply in the following JSON format:
-            {{
-                "node_list": ["node_id_1", "node_id_2", ..., "node_id_n"]
-            }}
-            Only return node_id values that appear in the tree. Do not invent node_ids.
-            Directly return the final JSON structure. Do not output anything else.
-        """
+You are given a question and have a tree structure of a document.
+Each node contains a node id, node title, and a corresponding summary.
+Your task is to find all nodes that are likely to contain the answer to the question.
+
+Question: {query}
+
+Please reply in the following JSON format:
+{{
+    "node_list": ["node_id_1", "node_id_2", ..., "node_id_n"]
+}}
+Only return node_id values that appear in the tree. Do not invent node_ids.
+Directly return the final JSON structure. Do not output anything else.
+"""
 
         search_text_chunks: list[str] = []
-        meta_events: list[Dict[str, Any]] = []
         for chunk in pageindex_chat_stream(
             [{"role": "user", "content": search_prompt}],
             doc_id=resolved_doc_id,
             temperature=0.1,
-            stream_metadata=stream_metadata,
+            enable_citations=enable_citations,
         ):
             if isinstance(chunk, dict):
-                meta = chunk.get("block_metadata", {})
-                if meta and stream_metadata:
-                    meta_events.append({"type": "metadata", "metadata": meta})
                 delta = (chunk.get("choices") or [{}])[0].get("delta", {})
                 content = delta.get("content", "")
                 if content:
@@ -145,8 +141,6 @@ def handle_pageindex_combined_stream(
                     "context_preview": context[:1000] + ("..." if len(context) > 1000 else ""),
                 }
             ) + "\n"
-            for evt in meta_events:
-                yield json.dumps(evt) + "\n"
             for evt in answer_stream():
                 yield json.dumps(evt) + "\n"
             yield json.dumps({"type": "done"}) + "\n"

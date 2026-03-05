@@ -4,7 +4,6 @@ const thinkingEl = document.getElementById('thinking');
 const nodesEl = document.getElementById('nodes');
 const answerEl = document.getElementById('answer');
 const docIdInput = document.getElementById('docId');
-const streamMetadata = document.getElementById('streamMetadata');
 
 function setStatus(msg) { statusEl.textContent = msg; }
 
@@ -26,7 +25,7 @@ async function streamAnswer() {
     const payload = {
       query: document.getElementById('question').value,
       doc_id: docIdInput.value || null,
-      stream_metadata: streamMetadata.checked,
+      enable_citations: false,
     };
 
     const res = await fetch(url, {

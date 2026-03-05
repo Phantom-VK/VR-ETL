@@ -29,22 +29,22 @@ def pageindex_chat_stream(
     messages: Iterable[Dict[str, str]],
     doc_id: str | None = None,
     temperature: float | None = None,
-    stream_metadata: bool = False,
+    enable_citations: bool = False,
 ):
     """Stream chat_completions from PageIndex."""
     settings.validate(require_pageindex=True, require_openai=False, require_generic_llm=False)
     resolved_doc_id = load_doc_id(doc_id)
     client = PageIndexClient(api_key=settings.pageindex_api_key)
     logger.info(
-        "Streaming PageIndex chat API doc_id=%s stream_metadata=%s",
+        "Streaming PageIndex chat API doc_id=%s enable_citations=%s",
         resolved_doc_id,
-        stream_metadata,
+        enable_citations,
     )
     for chunk in client.chat_completions(
         messages=list(messages),
         doc_id=resolved_doc_id,
         stream=True,
-        stream_metadata=stream_metadata,
+        stream_metadata=enable_citations,
         temperature=temperature,
     ):
         yield chunk
