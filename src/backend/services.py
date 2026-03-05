@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import sys
 from typing import List
 
 from fastapi import HTTPException
@@ -8,6 +9,7 @@ from fastapi import HTTPException
 from src.backend.graph.app import build_chat_graph
 from src.backend.llm import call_llm_stream
 from src.config import settings
+from src.utils.exception import VRETLException
 from src.utils.logger import logger
 
 # Compile LangGraph once
@@ -32,11 +34,20 @@ def handle_pageindex_combined_stream(
             "answer_temperature": answer_temperature,
             "enable_citations": enable_citations,
         }
+        logger.info(
+            "Service handle_pageindex_combined_stream query='%s' doc_id=%s temps(search=%.2f, answer=%.2f) citations=%s",
+            query,
+            doc_id,
+            search_temperature if search_temperature is not None else -1,
+            answer_temperature if answer_temperature is not None else -1,
+            enable_citations,
+        )
         graph_state = _CHAT_GRAPH.invoke(graph_input)
         thinking = graph_state.get("thinking", "")
         node_list: List[str] = graph_state.get("node_list", []) or []
         nodes = graph_state.get("nodes", []) or []
         context = graph_state.get("context", "") or ""
+        logger.info("Graph done node_count=%d context_chars=%d", len(nodes), len(context))
 
         # 3) Stream reasoning+answer from reasoning model
         answer_prompt = f"""
@@ -57,6 +68,7 @@ Always mention page numbers as <page=PAGE_NUMBER> when citing evidence.
                 yield evt
 
         async def async_stream():
+            logger.info("Streaming answer model=%s temp=%.2f", model_to_use, ans_temp)
             yield json.dumps(
                 {
                     "type": "meta",
@@ -75,7 +87,8 @@ Always mention page numbers as <page=PAGE_NUMBER> when citing evidence.
         raise HTTPException(status_code=400, detail=str(e))
     except Exception as e:  # noqa: BLE001
         logger.exception("Combined PageIndex+DeepSeek stream failed")
-        raise HTTPException(status_code=500, detail=str(e))
+        vr_exc = VRETLException(str(e), sys)
+        raise HTTPException(status_code=500, detail=str(vr_exc))
 
 
 __all__ = ["handle_pageindex_combined_stream"]

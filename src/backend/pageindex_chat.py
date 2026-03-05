@@ -34,21 +34,25 @@ def pageindex_chat_stream(
     """Stream chat_completions from PageIndex."""
     settings.validate(require_pageindex=True, require_openai=False, require_generic_llm=False)
     resolved_doc_id = load_doc_id(doc_id)
-    client = PageIndexClient(api_key=settings.pageindex_api_key)
-    logger.info(
-        "Streaming PageIndex chat API doc_id=%s temp=%s citations=%s",
-        resolved_doc_id,
-        temperature,
-        enable_citations,
-    )
-    for chunk in client.chat_completions(
-        messages=messages,
-        doc_id=resolved_doc_id,
-        stream=True,
-        enable_citations=enable_citations,
-        temperature=temperature,
-    ):
-        yield chunk
+    try:
+        client = PageIndexClient(api_key=settings.pageindex_api_key)
+        logger.info(
+            "Streaming PageIndex chat API doc_id=%s temp=%s citations=%s",
+            resolved_doc_id,
+            temperature,
+            enable_citations,
+        )
+        for chunk in client.chat_completions(
+            messages=messages,
+            doc_id=resolved_doc_id,
+            stream=True,
+            enable_citations=enable_citations,
+            temperature=temperature,
+        ):
+            yield chunk
+    except Exception as exc:  # noqa: BLE001
+        logger.exception("pageindex_chat_stream failed")
+        raise VRETLException(str(exc), sys) from exc
 
 
 __all__ = ["pageindex_chat_stream", "load_doc_id", "DEFAULT_DOC_ID_PATH"]
