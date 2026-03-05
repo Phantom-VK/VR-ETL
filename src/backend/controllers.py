@@ -18,7 +18,7 @@ async def chat(req: ChatRequest):
         doc_id=req.doc_id,
         search_temperature=req.search_temperature,
         answer_temperature=req.answer_temperature,
-        enable_citations=req.enable_citations,
+        enable_citations=True,
     )
     return StreamingResponse(generator, media_type="application/x-ndjson")
 

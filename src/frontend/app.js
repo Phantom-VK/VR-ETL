@@ -220,6 +220,7 @@ async function streamAnswer() {
       search_temperature: parseFloat(searchTemp.value) || 0.1,
       answer_temperature:  parseFloat(answerTemp.value) || 0.2,
       enable_citations: false,
+      use_math_tool: true,
       // Future: include history for multi-turn
       // history: chatHistory.slice(0, -1),
     };
@@ -262,6 +263,17 @@ async function streamAnswer() {
           setStepState('search', 'done');
           setStepState('nodes', 'active');
           setTicker(`Feeding ${count} node${count !== 1 ? 's' : ''} to LLM…`, 'working');
+        }
+
+        // ── tool execution ──
+        else if (evt.type === 'tool') {
+          setStepState('nodes', 'done');
+          setStepState('reason', 'active');
+          const expr = evt.args?.expression || '';
+          const res  = evt.result || '';
+          setTicker(`Math tool: ${expr} → ${res}`, 'working');
+          fullReason += `\n[math] ${expr} = ${res}\n`;
+          reasonText.textContent = fullReason;
         }
 
         // ── reasoning stream ──
