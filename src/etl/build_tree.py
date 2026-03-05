@@ -45,7 +45,7 @@ class TreeFetcher:
     def run(self) -> Dict[str, Any]:
         """Wait until PageIndex finishes processing and save the tree JSON."""
         try:
-            settings.validate(require_openai=False, require_pageindex=True)
+            settings.validate(require_pageindex=True)
             doc_id = self._load_doc_id()
             logger.info("Fetching tree for doc_id=%s", doc_id)
             client = self.client or PageIndexClient(api_key=settings.pageindex_api_key)

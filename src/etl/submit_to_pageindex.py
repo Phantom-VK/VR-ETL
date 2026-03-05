@@ -25,7 +25,7 @@ class DocumentSubmitter:
         """Submit the document and return the doc_id."""
         try:
             logger.info("Submitting PDF to PageIndex: %s", self.pdf_path)
-            settings.validate(require_openai=False, require_pageindex=True)
+            settings.validate(require_pageindex=True)
             if not self.pdf_path.exists():
                 raise FileNotFoundError(f"PDF not found: {self.pdf_path}")
 
