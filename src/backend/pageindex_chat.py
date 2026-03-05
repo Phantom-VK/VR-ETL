@@ -3,7 +3,7 @@ from __future__ import annotations
 
 import sys
 from pathlib import Path
-from typing import Any, Dict, Iterable
+from typing import Dict
 
 from pageindex import PageIndexClient
 
@@ -32,7 +32,7 @@ def pageindex_chat_stream(
     enable_citations: bool = False,
 ):
     """Stream chat_completions from PageIndex."""
-    settings.validate(require_pageindex=True, require_openai=False, require_generic_llm=False)
+    settings.validate(require_pageindex=True, require_generic_llm=False)
     resolved_doc_id = load_doc_id(doc_id)
     try:
         client = PageIndexClient(api_key=settings.pageindex_api_key)

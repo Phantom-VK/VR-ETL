@@ -5,5 +5,4 @@ fastapi
 uvicorn
 python-dotenv
 langgraph
-langchain-core
 sympy
