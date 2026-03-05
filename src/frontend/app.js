@@ -1,4 +1,3 @@
-
 const API_BASE = 'http://localhost:8000';
 
 // ─── DOM refs ────────────────────────────────────────────
@@ -24,7 +23,127 @@ const PIPELINE_STEPS = [
 ];
 
 // ─── Chat history (for future multi-turn) ────────────────
-const chatHistory = []; // [{role:'user'|'assistant', content:str}]
+const chatHistory = [];
+
+// ═══════════════════════════════════════════════════════════
+// RENDER UTILITIES  (Markdown + LaTeX + Mermaid)
+// ═══════════════════════════════════════════════════════════
+
+/**
+ * Renders text that may contain:
+ *  - ```mermaid ... ``` blocks   → rendered as Mermaid diagrams
+ *  - \[ ... \]  or  \( ... \)   → rendered by KaTeX (display / inline)
+ *  - **bold**, *italic*, etc.   → rendered by marked.js
+ *  - <page=N> citations         → styled chip
+ *
+ * Returns an HTML string safe to set as innerHTML.
+ */
+function renderRichText(raw) {
+  if (!raw) return '';
+
+  // 1. Protect mermaid blocks — swap them for placeholders
+  const mermaidBlocks = [];
+  let text = raw.replace(/```mermaid\s*([\s\S]*?)```/g, (_, code) => {
+    const idx = mermaidBlocks.length;
+    mermaidBlocks.push(code.trim());
+    return `%%MERMAID_BLOCK_${idx}%%`;
+  });
+
+  // 2. Protect display LaTeX  \[ ... \]
+  const latexDisplay = [];
+  text = text.replace(/\\\[([\s\S]*?)\\\]/g, (_, tex) => {
+    const idx = latexDisplay.length;
+    latexDisplay.push(tex.trim());
+    return `%%LATEX_DISPLAY_${idx}%%`;
+  });
+
+  // 3. Protect inline LaTeX  \( ... \)
+  const latexInline = [];
+  text = text.replace(/\\\(([\s\S]*?)\\\)/g, (_, tex) => {
+    const idx = latexInline.length;
+    latexInline.push(tex.trim());
+    return `%%LATEX_INLINE_${idx}%%`;
+  });
+
+  // 4. Style <page=N> citation tags
+  text = text.replace(/<page=(\d+)>/g,
+    '<span class="cite-chip">p.$1</span>');
+
+  // 5. Run marked.js for Markdown → HTML
+  let html = (window.marked && window.marked.parse)
+    ? window.marked.parse(text, { breaks: true, gfm: true })
+    : text.replace(/\n/g, '<br>');
+
+  // 6. Restore display LaTeX placeholders
+  latexDisplay.forEach((tex, idx) => {
+    let rendered = tex;
+    if (window.katex) {
+      try {
+        rendered = katex.renderToString(tex, { displayMode: true, throwOnError: false });
+      } catch (e) { rendered = `<code>${tex}</code>`; }
+    }
+    html = html.replace(`%%LATEX_DISPLAY_${idx}%%`, rendered);
+  });
+
+  // 7. Restore inline LaTeX placeholders
+  latexInline.forEach((tex, idx) => {
+    let rendered = tex;
+    if (window.katex) {
+      try {
+        rendered = katex.renderToString(tex, { displayMode: false, throwOnError: false });
+      } catch (e) { rendered = `<code>${tex}</code>`; }
+    }
+    html = html.replace(`%%LATEX_INLINE_${idx}%%`, rendered);
+  });
+
+  // 8. Restore Mermaid placeholders as special divs
+  mermaidBlocks.forEach((code, idx) => {
+    const placeholder = `<div class="mermaid-pending" data-code="${escapeAttr(code)}"></div>`;
+    html = html.replace(`%%MERMAID_BLOCK_${idx}%%`, placeholder);
+  });
+
+  return html;
+}
+
+function escapeAttr(str) {
+  return str
+    .replace(/&/g, '&amp;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;');
+}
+
+/**
+ * After setting innerHTML on a container, call this to
+ * actually render any .mermaid-pending divs inside it.
+ */
+function hydrateMermaid(container) {
+  if (!window.mermaid) return;
+  const pending = container.querySelectorAll('.mermaid-pending');
+  if (!pending.length) return;
+
+  pending.forEach(el => {
+    const code = el.getAttribute('data-code') || '';
+    const wrapper = document.createElement('div');
+    wrapper.className = 'mermaid-diagram';
+
+    const mermaidDiv = document.createElement('div');
+    mermaidDiv.className = 'mermaid';
+    mermaidDiv.textContent = code;
+
+    wrapper.appendChild(mermaidDiv);
+    el.replaceWith(wrapper);
+
+    try {
+      window.mermaid.initialize({ startOnLoad: false, theme: 'dark' });
+      window.mermaid.init(undefined, mermaidDiv);
+    } catch (e) {
+      console.error('Mermaid render error:', e);
+      mermaidDiv.textContent = '[Diagram render error: ' + e.message + ']';
+    }
+  });
+}
 
 // ═══════════════════════════════════════════════════════════
 // STATUS TICKER
@@ -42,7 +161,6 @@ function initTickerChips() {
 }
 
 function setStepState(stepId, state) {
-  // state: 'pending' | 'active' | 'done'
   const chip = document.getElementById(`chip-${stepId}`);
   if (!chip) return;
   chip.className = `step-chip ${state}`;
@@ -73,7 +191,6 @@ settingsToggle.addEventListener('click', (e) => {
 document.addEventListener('click', () => settingsDropdown.classList.remove('open'));
 settingsDropdown.addEventListener('click', e => e.stopPropagation());
 
-// Sync range ↔ number inputs
 function syncInputs(rangeEl, numEl) {
   rangeEl.addEventListener('input', () => { numEl.value = rangeEl.value; });
   numEl.addEventListener('input', ()  => { rangeEl.value = numEl.value; });
@@ -81,7 +198,6 @@ function syncInputs(rangeEl, numEl) {
 syncInputs(searchTempRange, searchTemp);
 syncInputs(answerTempRange, answerTemp);
 
-// Mode toggle
 document.querySelectorAll('.sd-toggle').forEach(btn => {
   btn.addEventListener('click', () => {
     if (btn.title?.includes('soon')) return;
@@ -137,7 +253,7 @@ function addUserMessage(text) {
 
 /**
  * Creates the streaming AI response bubble.
- * Returns refs to the live text elements so we can append to them.
+ * Returns refs + a flush function to do final rich render.
  */
 function addAssistantStreamBubble() {
   const msg = document.createElement('div');
@@ -183,7 +299,27 @@ function addAssistantStreamBubble() {
   chatLog.appendChild(msg);
   scrollToBottom();
 
-  return { reasonText, answerText, answerLabel };
+  /**
+   * During streaming we use plain text for speed.
+   * Call flushRich() once streaming is complete to upgrade
+   * both sections to full markdown + LaTeX + mermaid.
+   */
+  function flushRich(fullReason, fullAnswer) {
+    // Render reasoning
+    reasonText.classList.remove('typing-cursor');
+    reasonText.innerHTML = renderRichText(fullReason);
+    hydrateMermaid(reasonText);
+
+    // Render answer
+    answerText.classList.remove('typing-cursor');
+    if (fullAnswer) {
+      answerText.innerHTML = renderRichText(fullAnswer);
+      hydrateMermaid(answerText);
+    }
+    scrollToBottom();
+  }
+
+  return { reasonText, answerText, answerLabel, flushRich };
 }
 
 
@@ -200,13 +336,11 @@ async function streamAnswer() {
   initTickerChips();
   setTicker('Sending query to agent…', 'working');
 
-  // Add user message
   addUserMessage(question);
   chatHistory.push({ role: 'user', content: question });
   questionInput.value = '';
 
-  // Build streaming bubble
-  const { reasonText, answerText, answerLabel } = addAssistantStreamBubble();
+  const { reasonText, answerText, answerLabel, flushRich } = addAssistantStreamBubble();
 
   let fullReason = '';
   let fullAnswer = '';
@@ -221,8 +355,6 @@ async function streamAnswer() {
       answer_temperature:  parseFloat(answerTemp.value) || 0.2,
       enable_citations: false,
       use_math_tool: true,
-      // Future: include history for multi-turn
-      // history: chatHistory.slice(0, -1),
     };
 
     const res = await fetch(`${API_BASE}/chat`, {
@@ -248,7 +380,7 @@ async function streamAnswer() {
 
       buffer += decoder.decode(value, { stream: true });
       const lines = buffer.split('\n');
-      buffer = lines.pop(); // keep incomplete line
+      buffer = lines.pop();
 
       for (const line of lines) {
         if (!line.trim()) continue;
@@ -270,10 +402,11 @@ async function streamAnswer() {
           setStepState('nodes', 'done');
           setStepState('reason', 'active');
           const expr = evt.args?.expression || '';
-          const res  = evt.result || '';
-          setTicker(`Math tool: ${expr} → ${res}`, 'working');
-          fullReason += `\n[math] ${expr} = ${res}\n`;
-          reasonText.textContent = fullReason;
+          const result = evt.result || '';
+          setTicker(`Math tool: ${expr} → ${result}`, 'working');
+          // Accumulate as plain text during stream; will be richly rendered on done
+          fullReason += `\n**[math]** \`${expr}\` = \`${result}\`\n`;
+          reasonText.textContent = fullReason;  // plain text during stream
         }
 
         // ── reasoning stream ──
@@ -282,7 +415,7 @@ async function streamAnswer() {
           setStepState('reason', 'active');
           setTicker('Reasoning…', 'working');
           fullReason += evt.text;
-          reasonText.textContent = fullReason;
+          reasonText.textContent = fullReason;  // plain text during stream
           scrollToBottom();
         }
 
@@ -291,14 +424,13 @@ async function streamAnswer() {
           setStepState('reason', 'done');
           setStepState('answer', 'active');
           setTicker('Writing answer…', 'working');
-          // Show answer section on first chunk
           if (answerText.style.display === 'none') {
             reasonText.classList.remove('typing-cursor');
             answerLabel.style.display = 'flex';
             answerText.style.display  = 'block';
           }
           fullAnswer += evt.text;
-          answerText.textContent = fullAnswer;
+          answerText.textContent = fullAnswer;  // plain text during stream
           scrollToBottom();
         }
 
@@ -306,14 +438,17 @@ async function streamAnswer() {
         else if (evt.type === 'done') {
           setStepState('answer', 'done');
           answerText.classList.remove('typing-cursor');
-          // If no answer tokens arrived but we have reasoning, surface reasoning as answer fallback
+
+          // If no answer tokens but we have reasoning, surface reasoning as answer fallback
           if (!fullAnswer && fullReason) {
             answerLabel.style.display = 'flex';
             answerText.style.display  = 'block';
-            answerText.textContent = fullReason;
           }
+
+          // ★ KEY: now upgrade both sections to full rich render
+          flushRich(fullReason, fullAnswer || fullReason);
+
           setTicker('Done ✓', 'active');
-          // Save to history
           chatHistory.push({ role: 'assistant', content: fullAnswer || fullReason });
         }
       }
@@ -323,22 +458,23 @@ async function streamAnswer() {
     if (buffer.trim()) {
       try {
         const evt = JSON.parse(buffer);
-        if (evt.type === 'reason') { fullReason += evt.text; reasonText.textContent = fullReason; }
-        if (evt.type === 'answer') { fullAnswer += evt.text; answerText.textContent = fullAnswer; }
-        if (evt.type === 'done')   { 
+        if (evt.type === 'reason') { fullReason += evt.text; }
+        if (evt.type === 'answer') { fullAnswer += evt.text; }
+        if (evt.type === 'done') {
           if (!fullAnswer && fullReason) {
             answerLabel.style.display = 'flex';
             answerText.style.display  = 'block';
-            answerText.textContent = fullReason;
           }
-          setTicker('Done ✓', 'active'); 
+          flushRich(fullReason, fullAnswer || fullReason);
+          setTicker('Done ✓', 'active');
         }
       } catch { /* ignore */ }
     }
 
-    // Cleanup cursors
-    reasonText.classList.remove('typing-cursor');
-    answerText.classList.remove('typing-cursor');
+    // Safety: if stream ended without 'done' event, still do rich render
+    if (fullReason || fullAnswer) {
+      flushRich(fullReason, fullAnswer);
+    }
 
     if (!fullAnswer && !fullReason) {
       setTicker('No response received.', 'error');
@@ -349,14 +485,12 @@ async function streamAnswer() {
     setTicker('Error: ' + err.message, 'error');
     tickerDot.className = 'ticker-dot error';
 
-    // Show error inline
     reasonText.classList.remove('typing-cursor');
     reasonText.textContent = '⚠️ ' + err.message;
     reasonText.style.color = 'var(--red)';
 
   } finally {
     runBtn.disabled = false;
-    // Auto-reset ticker after 6 seconds
     setTimeout(() => {
       if (tickerText.textContent.startsWith('Done') || tickerText.textContent.startsWith('Error')) {
         resetTicker();
@@ -377,7 +511,6 @@ questionInput.addEventListener('keydown', (e) => {
     e.preventDefault();
     streamAnswer();
   }
-  // Shift+Enter = newline (default behaviour — no override needed)
 });
 
 // ── Init ────────────────────────────────────────────────
