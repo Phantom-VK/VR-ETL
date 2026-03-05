@@ -7,7 +7,7 @@ Vectorless RAG ETL pipeline built around PageIndex to ingest PDFs and produce a 
 - Virtual env (`python -m venv .venv`) and activate it.
 - Install deps: `pip install -r requirements.txt`.
 - Secrets: set `PAGEINDEX_API_KEY` (required). Copy `.env.example` → `.env` and fill values, or export in your shell.
-- Generic LLM access: set `API_KEY`, `BASE_URL`, `CHAT_MODEL` (answers, default temp 0.2), `REASONING_MODEL` (search, default temp 0.1). Requests can override `search_model`, `answer_model`, `search_temperature`, `answer_temperature` (or a single `temperature` for both).
+- Generic LLM access: set `API_KEY`, `BASE_URL`, `CHAT_MODEL` (answers, temp fixed 0.2), `REASONING_MODEL` (PageIndex search + answer reasoning, temp fixed 0.1). Requests may override models; temperatures are fixed.
 
 ## ETL Outputs (knowledge base artifacts)
 - `data/processed/doc_id.txt` – PageIndex doc identifier.

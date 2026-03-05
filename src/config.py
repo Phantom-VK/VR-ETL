@@ -13,8 +13,6 @@ class Settings:
         self.base_url = os.getenv("BASE_URL", "")
         self.chat_model = os.getenv("CHAT_MODEL", "")
         self.reasoning_model = os.getenv("REASONING_MODEL", "")
-        self.reasoning_temperature = float(os.getenv("REASONING_TEMPERATURE", "0.1"))
-        self.chat_temperature = float(os.getenv("CHAT_TEMPERATURE", "0.2"))
 
     def validate(
         self,

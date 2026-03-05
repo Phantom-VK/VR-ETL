@@ -11,33 +11,11 @@ from src.utils.logger import logger
 from src.utils.exception import VRETLException
 
 
-def call_llm(prompt: str, model: Optional[str] = None, temperature: float = 0.0, base_url: Optional[str] = None) -> str:
-    """Call the chat completion API and return the assistant message content.
-
-    Defaults target DeepSeek via base_url, but remains compatible with OpenAI API surface.
-    """
-    try:
-        settings.validate(require_openai=False, require_pageindex=False, require_generic_llm=True)
-        api_key = settings.api_key
-        api_base = base_url or settings.base_url
-        model_name = model
-        client = OpenAI(api_key=api_key, base_url=api_base)
-        logger.info("Calling LLM model=%s temp=%.2f prompt_chars=%d", model_name, temperature, len(prompt))
-        response = client.chat.completions.create(
-            model=model_name,
-            messages=[{"role": "user", "content": prompt}],
-            temperature=temperature,
-            stream=False,
-        )
-        content = response.choices[0].message.content if response.choices else ""
-        logger.info("LLM call completed (chars=%d) preview=%r", len(content), content[:120])
-        return content or ""
-    except Exception as exc:  # noqa: BLE001
-        raise VRETLException(str(exc), sys) from exc
-
-
 def call_llm_stream(prompt: str, model: Optional[str] = None, temperature: float = 0.0, base_url: Optional[str] = None):
-    """Stream tokens from the chat completion API (generator of text chunks)."""
+    """Stream reasoning and answer tokens separately.
+
+    Yields dict events: {"type": "reason"|"answer", "text": str}
+    """
     try:
         settings.validate(require_pageindex=False, require_generic_llm=True)
         api_key = settings.api_key
@@ -55,22 +33,13 @@ def call_llm_stream(prompt: str, model: Optional[str] = None, temperature: float
             if not chunk.choices:
                 continue
             delta = chunk.choices[0].delta
-            content = getattr(delta, "content", None)
-            if not content:
-                continue
-            if isinstance(content, str):
-                yield content
-            elif isinstance(content, list):
-                parts = []
-                for part in content:
-                    if hasattr(part, "text"):
-                        parts.append(part.text)
-                    elif isinstance(part, dict) and "text" in part:
-                        parts.append(part["text"])
-                if parts:
-                    yield "".join(parts)
+            # DeepSeek reasoner: reasoning_content first, then content
+            if getattr(delta, "reasoning_content", None):
+                yield {"type": "reason", "text": delta.reasoning_content}
+            elif getattr(delta, "content", None):
+                yield {"type": "answer", "text": delta.content}
     except Exception as exc:  # noqa: BLE001
         raise VRETLException(str(exc), sys) from exc
 
 
-__all__ = ["call_llm", "call_llm_stream"]
+__all__ = ["call_llm_stream"]
