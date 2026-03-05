@@ -83,16 +83,15 @@ def retrieve_node(state: ChatState) -> ChatState:
             
             Question: {query}
             
-            Please reply in the following JSON format:
-            {{
-                "node_list": ["node_id_1", "node_id_2", ..., "node_id_n"],
-                "require_math": <true|false>,
-                "citations": ["<doc=file.pdf;page=1>", "..."]
-            }}
-            Only return node_id values that appear in the tree. Do not invent node_ids.
-            If citations are available, include them; otherwise return an empty list.
-            Directly return the final JSON structure. Do not output anything else.
-        """
+                Please reply in the following JSON format:
+                {{
+                    "node_list": ["node_id_1", "node_id_2", ..., "node_id_n"],
+    "require_math": <true|false>,
+    "citations": ["<doc=file.pdf;page=1>", "..."]
+}}
+Only return node_id values that appear in the tree. Do not invent node_ids.
+Directly return the final JSON structure. Do not output anything else.
+"""
 
         search_chunks: List[str] = []
         for chunk in pageindex_chat_stream(

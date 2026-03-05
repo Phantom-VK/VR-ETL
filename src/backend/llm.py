@@ -43,12 +43,46 @@ def call_llm_stream(prompt: str, model: Optional[str] = None, temperature: float
         raise VRETLException(str(exc), sys) from exc
 
 
+def call_llm_stream_messages(
+    messages: List[Dict[str, Any]],
+    model: Optional[str] = None,
+    temperature: float = 0.0,
+    base_url: Optional[str] = None,
+):
+    """Stream reasoning and answer tokens given full message list (system/user/tool etc)."""
+    try:
+        settings.validate(require_pageindex=False, require_generic_llm=True)
+        api_key = settings.api_key
+        api_base = base_url or settings.base_url
+        model_name = model
+        client = OpenAI(api_key=api_key, base_url=api_base)
+        logger.info("Streaming LLM (messages) model=%s temp=%.2f msg_count=%d", model_name, temperature, len(messages))
+        stream = client.chat.completions.create(
+            model=model_name,
+            messages=messages,
+            temperature=temperature,
+            stream=True,
+        )
+        for chunk in stream:
+            if not chunk.choices:
+                continue
+            delta = chunk.choices[0].delta
+            if getattr(delta, "reasoning_content", None):
+                yield {"type": "reason", "text": delta.reasoning_content}
+            elif getattr(delta, "content", None):
+                yield {"type": "answer", "text": delta.content}
+    except Exception as exc:  # noqa: BLE001
+        logger.exception("LLM streaming call (messages) failed")
+        raise VRETLException(str(exc), sys) from exc
+
+
 def call_llm_tools(
-    prompt: str,
+    messages: List[Dict[str, Any]],
     tools: Iterable[Dict[str, Any]],
     model: Optional[str] = None,
     temperature: float = 0.0,
     base_url: Optional[str] = None,
+    tool_choice: Any = "auto",
 ) -> Dict[str, Any]:
     """Single non-stream call with tool choice=auto. Returns dict with tool_call or None."""
     try:
@@ -57,31 +91,18 @@ def call_llm_tools(
         api_base = base_url or settings.base_url
         model_name = model
         client = OpenAI(api_key=api_key, base_url=api_base)
-        logger.info("LLM tool call model=%s temp=%.2f prompt_chars=%d", model_name, temperature, len(prompt))
+        logger.info("LLM tool call model=%s temp=%.2f messages=%d", model_name, temperature, len(messages))
         resp = client.chat.completions.create(
             model=model_name,
-            messages=[{"role": "user", "content": prompt}],
+            messages=messages,
             temperature=temperature,
             tools=tools,
-            tool_choice="auto",
+            tool_choice=tool_choice,
         )
-        choice = resp.choices[0]
-        tool_calls = choice.message.tool_calls or []
-        content = getattr(choice.message, "content", "") or ""
-        reasoning = getattr(choice.message, "reasoning_content", "") if hasattr(choice.message, "reasoning_content") else ""
-        if tool_calls:
-            tc = tool_calls[0]
-            return {
-                "tool_name": tc.function.name,
-                "arguments": tc.function.arguments,
-                "id": tc.id,
-                "reasoning": reasoning,
-                "content": content,
-            }
-        return {"tool_name": None, "arguments": None, "reasoning": reasoning, "content": content}
+        return resp.choices[0].message
     except Exception as exc:  # noqa: BLE001
         logger.exception("LLM tool call failed")
         raise VRETLException(str(exc), sys) from exc
 
 
-__all__ = ["call_llm_stream", "call_llm_tools"]
+__all__ = ["call_llm_stream", "call_llm_stream_messages", "call_llm_tools"]

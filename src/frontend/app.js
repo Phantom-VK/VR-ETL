@@ -306,6 +306,12 @@ async function streamAnswer() {
         else if (evt.type === 'done') {
           setStepState('answer', 'done');
           answerText.classList.remove('typing-cursor');
+          // If no answer tokens arrived but we have reasoning, surface reasoning as answer fallback
+          if (!fullAnswer && fullReason) {
+            answerLabel.style.display = 'flex';
+            answerText.style.display  = 'block';
+            answerText.textContent = fullReason;
+          }
           setTicker('Done ✓', 'active');
           // Save to history
           chatHistory.push({ role: 'assistant', content: fullAnswer || fullReason });
@@ -319,7 +325,14 @@ async function streamAnswer() {
         const evt = JSON.parse(buffer);
         if (evt.type === 'reason') { fullReason += evt.text; reasonText.textContent = fullReason; }
         if (evt.type === 'answer') { fullAnswer += evt.text; answerText.textContent = fullAnswer; }
-        if (evt.type === 'done')   { setTicker('Done ✓', 'active'); }
+        if (evt.type === 'done')   { 
+          if (!fullAnswer && fullReason) {
+            answerLabel.style.display = 'flex';
+            answerText.style.display  = 'block';
+            answerText.textContent = fullReason;
+          }
+          setTicker('Done ✓', 'active'); 
+        }
       } catch { /* ignore */ }
     }
 

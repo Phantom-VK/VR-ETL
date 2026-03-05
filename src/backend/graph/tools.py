@@ -19,6 +19,7 @@ MATH_TOOL: list[Dict[str, Any]] = [
         "type": "function",
         "function": {
             "name": "evaluate_math",
+            "strict": True,
             "description": "Safely evaluate a mathematical expression (supports +,-,*,/,**, sqrt, log, exp, trig, percentages).",
             "parameters": {
                 "type": "object",
@@ -36,6 +37,7 @@ MATH_TOOL: list[Dict[str, Any]] = [
                     },
                 },
                 "required": ["expression"],
+                "additionalProperties": False,
             },
         },
     }
@@ -71,7 +73,7 @@ def run_math_tool(expression: str, precision: int = 4) -> str:
         result = f"{val}"
         logger.info("math_tool expression='%s' -> %s", expression, result)
         return result
-    except Exception as exc:  # noqa: BLE001
+    except Exception as exc:
         logger.exception("math_tool failed for expression='%s'", expression)
         raise VRETLException(str(exc), sys) from exc
 
