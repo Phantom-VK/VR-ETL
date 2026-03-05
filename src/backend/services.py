@@ -62,6 +62,7 @@ def handle_pageindex_combined_stream(
         node_list   = graph_state.get("node_list", []) or []
         nodes       = graph_state.get("nodes",     []) or []
         context     = graph_state.get("context",   "") or ""
+        citations   = graph_state.get("citations", []) or []
         use_math = bool(graph_state.get("require_math", False))
 
         logger.info(
@@ -173,6 +174,7 @@ def handle_pageindex_combined_stream(
                 "node_list":      node_list,
                 "nodes":          nodes,
                 "context_preview": context[:1000] + ("..." if len(context) > 1000 else ""),
+                "citations":      citations,
             }) + "\n"
 
             # only emitted when math tool actually ran
