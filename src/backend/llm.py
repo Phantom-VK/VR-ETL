@@ -39,6 +39,7 @@ def call_llm_stream(prompt: str, model: Optional[str] = None, temperature: float
             elif getattr(delta, "content", None):
                 yield {"type": "answer", "text": delta.content}
     except Exception as exc:  # noqa: BLE001
+        logger.exception("LLM streaming call failed")
         raise VRETLException(str(exc), sys) from exc
 
 
