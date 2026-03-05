@@ -21,7 +21,6 @@ class ChatState(TypedDict, total=False):
     context_preview: str
 
     require_math: bool
-    citations: List[str]
 
 
 __all__ = ["ChatState"]

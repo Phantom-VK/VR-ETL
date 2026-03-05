@@ -83,16 +83,14 @@ def retrieve_node(state: ChatState) -> ChatState:
             
             Question: {query}
             
-            Please reply in the following JSON format:
-            {{
-                "node_list": ["node_id_1", "node_id_2", ..., "node_id_n"],
-                "require_math": <true|false>,
-                "citations": ["<doc=file.pdf;page=1>", "..."]
-            }}
-            Only return node_id values that appear in the tree. Do not invent node_ids.
-            If citations are available, include them; otherwise return an empty list.
-            Directly return the final JSON structure. Do not output anything else.
-        """
+Please reply in the following JSON format:
+{{
+    "node_list": ["node_id_1", "node_id_2", ..., "node_id_n"],
+    "require_math": <true|false>
+}}
+Only return node_id values that appear in the tree. Do not invent node_ids.
+Directly return the final JSON structure. Do not output anything else.
+"""
 
         search_chunks: List[str] = []
         for chunk in pageindex_chat_stream(
@@ -112,11 +110,10 @@ def retrieve_node(state: ChatState) -> ChatState:
         logger.info("retrieve_node: raw_pageindex_output=%s", full_search[:800])
         thinking, node_list, require_math, citations = _parse_pageindex_search_output(full_search)
         logger.info(
-            "retrieve_node: parsed nodes=%s thinking_len=%d require_math=%s citations=%d",
+            "retrieve_node: parsed nodes=%s thinking_len=%d require_math=%s",
             node_list,
             len(thinking),
             require_math,
-            len(citations),
         )
 
         nodes = []
@@ -152,7 +149,6 @@ def retrieve_node(state: ChatState) -> ChatState:
             "context": context,
             "context_preview": preview,
             "require_math": require_math,
-            "citations": citations,
         }
     except Exception as exc:  # noqa: BLE001
         logger.exception("retrieve_node failed")

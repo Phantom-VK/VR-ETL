@@ -19,6 +19,7 @@ MATH_TOOL: list[Dict[str, Any]] = [
         "type": "function",
         "function": {
             "name": "evaluate_math",
+            "strict": True,
             "description": "Safely evaluate a mathematical expression (supports +,-,*,/,**, sqrt, log, exp, trig, percentages).",
             "parameters": {
                 "type": "object",
@@ -36,6 +37,7 @@ MATH_TOOL: list[Dict[str, Any]] = [
                     },
                 },
                 "required": ["expression"],
+                "additionalProperties": False,
             },
         },
     }
