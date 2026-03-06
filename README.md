@@ -8,6 +8,8 @@
 
 Vectorless, agentic QA over the Cyber Ireland 2022 report. ETL ingests the PDF into a PageIndex tree + node map; a single `/chat` endpoint orchestrates retrieval, math tooling, and streaming answers with citations.
 
+**Query test logs: see [Test Logs/](`Test Logs/`) directory for the three evaluation scenarios.**
+
 ## Tech Stack
 - FastAPI backend with LangGraph orchestration
 - PageIndex for document ingestion and hierarchical retrieval
