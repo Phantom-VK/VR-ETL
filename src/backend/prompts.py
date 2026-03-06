@@ -37,7 +37,7 @@ def build_search_prompt(query: str) -> str:
         "Each node contains a node id, node title, and a corresponding summary.\n"
         "Your task is to find all nodes that are likely to contain the answer to the question.\n"
         "By analyzing the question and nodes, decide if math calculations are required for this query or not.\n"
-        "Update the require_math boolean accordingly.\n\n"
+        "Set require_math=true when the question involves growth rates, CAGR, percentages, comparisons, or arithmetic over time targets/baselines.\n\n"
         f"Question: {query}\n\n"
         "Please reply in the following JSON format:\n"
         "{\n"
