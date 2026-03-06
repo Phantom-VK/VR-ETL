@@ -1,0 +1,24 @@
+Uvicorn running on http://127.0.0.1:8000 (Press CTRL+C to quit)
+INFO:     Started reloader process [34457] using StatReload
+INFO:     Started server process [34459]
+INFO:     Waiting for application startup.
+INFO:     Application startup complete.
+INFO:     127.0.0.1:55884 - "OPTIONS /chat HTTP/1.1" 200 OK
+[ 2026-03-06 12:49:35,530 ] 15 vr_etl - INFO - POST /chat query_len=76 doc_id=None
+[ 2026-03-06 12:49:35,530 ] 55 vr_etl - INFO - handle_pageindex_combined_stream | query='What is the total number of jobs reported, and where exactly is this stated?' doc_id=None temps(search=0.10 answer=0.20) citations=True
+[ 2026-03-06 12:49:35,532 ] 72 vr_etl - INFO - retrieve_node: doc_id=pi-cmmd2tt3k00990hobdgfx363t search_temp=0.10 citations=True
+[ 2026-03-06 12:49:35,532 ] 38 vr_etl - INFO - Getting nodes from PageIndex chat API doc_id=pi-cmmd2tt3k00990hobdgfx363t temp=0.1 citations=True
+[ 2026-03-06 12:50:08,576 ] 96 vr_etl - INFO - retrieve_node: raw_pageindex_output={"doc_name": "State-of-the-Cyber-Security-Sector-in-Ireland-2022-Report_2.pdf", "part": 1}```json
+{
+    "node_list": ["0002", "0028", "0029", "0030", "0031", "0032", "0033", "0034", "0040", "0056"],
+    "require_math": false,
+    "citations": ["<doc=State-of-the-Cyber-Security-Sector-in-Ireland-2022-Report_2.pdf;page=3>", "<doc=State-of-the-Cyber-Security-Sector-in-Ireland-2022-Report_2.pdf;page=19>", "<doc=State-of-the-Cyber-Security-Sector-in-Ireland-2022-Report_2.pdf;page=23>", "<doc=State-of-the-Cyber-Security-Sector-in-Ireland-2022-Report_2.pdf;page=32>"]
+}
+```
+[ 2026-03-06 12:50:08,576 ] 100 vr_etl - INFO - retrieve_node: parsed nodes=['0002', '0028', '0029', '0030', '0031', '0032', '0033', '0034', '0040', '0056'] thinking_len=0 require_math=False inferred_math=False citations=4
+[ 2026-03-06 12:50:08,576 ] 132 vr_etl - INFO - retrieve_node: built context chars=10281 nodes_kept=10
+[ 2026-03-06 12:50:08,577 ] 73 vr_etl - INFO - Graph done | node_count=10 context_chars=10281 use_math=False
+INFO:     127.0.0.1:55884 - "POST /chat HTTP/1.1" 200 OK
+[ 2026-03-06 12:50:08,615 ] 185 vr_etl - INFO - Streaming answer | model=deepseek-reasoner temp=0.20
+[ 2026-03-06 12:50:08,628 ] 59 vr_etl - INFO - Streaming LLM (messages) model=deepseek-reasoner temp=0.20 msg_count=2
+[ 2026-03-06 12:50:09,251 ] 1025 httpx - INFO - HTTP Request: POST https://api.deepseek.com/chat/completions "HTTP/1.1 200 OK"
