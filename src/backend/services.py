@@ -10,7 +10,7 @@ from fastapi import HTTPException
 from src.backend.graph.app import build_chat_graph
 from src.backend.graph.tools import MATH_TOOL, run_math_tool
 from src.backend.llm import call_llm_stream_messages, call_llm_tools
-from src.backend.prompts.base import (
+from src.backend.prompts import (
     SYSTEM_PROMPT,
     build_user_prompt,
     build_citation_retry_prompt,
