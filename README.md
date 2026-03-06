@@ -22,6 +22,7 @@ Vectorless, agentic QA over the Cyber Ireland 2022 report. ETL ingests the PDF i
 - [ETL](docs/etl.md) — pipeline steps, artifacts
 - [Backend](docs/backend.md) — endpoints, prompts, flow
 - [Frontend](docs/frontend.md) — UI usage
+- [Architecture](docs/architecture.md) — high-level flow and justification slots
 
 ## Quick Start
 ```bash
