@@ -10,6 +10,11 @@ from fastapi import HTTPException
 from src.backend.graph.app import build_chat_graph
 from src.backend.graph.tools import MATH_TOOL, run_math_tool
 from src.backend.llm import call_llm_stream_messages, call_llm_tools
+from src.backend.prompts.base import (
+    SYSTEM_PROMPT,
+    build_user_prompt,
+    build_citation_retry_prompt,
+)
 from src.config import settings
 from src.utils.exception import VRETLException
 from src.utils.logger import logger
@@ -70,24 +75,7 @@ def handle_pageindex_combined_stream(
             len(nodes), len(context), use_math,
         )
 
-        SYSTEM_PROMPT = (
-            "You are a precise document Q&A assistant. "
-            "Use ONLY the provided context. "
-            "Cite page numbers as <page=PAGE_NUMBER> for every claim. "
-            "Never invent facts. "
-            "If a math tool result is provided, trust it and do not recalculate."
-        )
-
-        user_prompt = (
-            "Context:\n"
-            f"{context}\n\n"
-            f"Question: {query}\n\n"
-            "Rules:\n"
-            "- Be clear and concise.\n"
-            "- Cite page numbers as <page=PAGE_NUMBER> wherever you use evidence.\n"
-            "- Do NOT invent information outside the context.\n"
-            "- Convert numerical outputs to proper units."
-        )
+        user_prompt = build_user_prompt(context, query)
 
         base_messages = [
             {"role": "system", "content": SYSTEM_PROMPT},
@@ -167,6 +155,32 @@ def handle_pageindex_combined_stream(
                 }
             )
 
+        async def stream_with_retry_if_missing_citations(full_answer: str):
+            """If no <page=...> citation is present, rerun a citation-enforce prompt and stream its tokens."""
+            if "<page=" in full_answer:
+                return
+            logger.info("Answer missing citations; retrying with citation-enforce prompt")
+            retry_messages = [
+                {"role": "system", "content": SYSTEM_PROMPT},
+                {"role": "user", "content": build_citation_retry_prompt(full_answer, context, query)},
+            ]
+            loop = asyncio.get_event_loop()
+            queue: asyncio.Queue = asyncio.Queue()
+
+            def retry_producer():
+                try:
+                    for evt in call_llm_stream_messages(retry_messages, model=model_to_use, temperature=ans_temp):
+                        loop.call_soon_threadsafe(queue.put_nowait, evt)
+                finally:
+                    loop.call_soon_threadsafe(queue.put_nowait, None)
+
+            loop.run_in_executor(None, retry_producer)
+            while True:
+                evt = await queue.get()
+                if evt is None:
+                    break
+                yield json.dumps(evt) + "\n"
+
         async def async_stream():
             logger.info("Streaming answer | model=%s temp=%.2f", model_to_use, ans_temp)
 
@@ -192,10 +206,13 @@ def handle_pageindex_combined_stream(
             # LLM answer stream (reason + answer chunks from call_llm_stream)
             loop = asyncio.get_event_loop()
             queue: asyncio.Queue = asyncio.Queue()
+            answer_accumulator: list[str] = []
 
             def producer():
                 try:
                     for evt in call_llm_stream_messages(final_messages, model=model_to_use, temperature=ans_temp):
+                        if evt.get("type") == "answer":
+                            answer_accumulator.append(evt.get("text", ""))
                         loop.call_soon_threadsafe(queue.put_nowait, evt)
                 finally:
                     loop.call_soon_threadsafe(queue.put_nowait, None)
@@ -206,6 +223,11 @@ def handle_pageindex_combined_stream(
                 if evt is None:
                     break
                 yield json.dumps(evt) + "\n"
+
+            # Citation enforcement retry if needed
+            full_answer = "".join(answer_accumulator)
+            async for retry_evt in stream_with_retry_if_missing_citations(full_answer):
+                yield retry_evt
 
             yield json.dumps({"type": "done"}) + "\n"
 

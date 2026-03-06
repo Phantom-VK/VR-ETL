@@ -7,6 +7,7 @@ from typing import Any, Dict, List
 
 from src.backend.graph.state import ChatState
 from src.backend.pageindex_chat import load_doc_id, pageindex_chat_stream
+from src.backend.prompts import build_search_prompt
 from src.utils.logger import logger
 from src.utils.exception import VRETLException
 
@@ -74,24 +75,7 @@ def retrieve_node(state: ChatState) -> ChatState:
             enable_citations,
         )
 
-        search_prompt = f"""
-            You are given a question and have a tree structure of a document.
-            Each node contains a node id, node title, and a corresponding summary.
-            Your task is to find all nodes that are likely to contain the answer to the question.
-            By analyzing the question and nodes, decide if math calculations are required for this query or not.
-            Update the require_math boolean accordingly.
-            
-            Question: {query}
-            
-                Please reply in the following JSON format:
-                {{
-                    "node_list": ["node_id_1", "node_id_2", ..., "node_id_n"],
-    "require_math": <true|false>,
-    "citations": ["<doc=file.pdf;page=1>", "..."]
-}}
-Only return node_id values that appear in the tree. Do not invent node_ids.
-Directly return the final JSON structure. Do not output anything else.
-"""
+        search_prompt = build_search_prompt(query)
 
         search_chunks: List[str] = []
         for chunk in pageindex_chat_stream(
