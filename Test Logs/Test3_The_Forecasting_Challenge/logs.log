@@ -1,0 +1,31 @@
+Uvicorn running on http://127.0.0.1:8000 (Press CTRL+C to quit)
+INFO:     Started reloader process [35901] using StatReload
+INFO:     Started server process [35903]
+INFO:     Waiting for application startup.
+INFO:     Application startup complete.
+[ 2026-03-06 12:54:47,198 ] 15 vr_etl - INFO - POST /chat query_len=132 doc_id=None
+[ 2026-03-06 12:54:47,198 ] 55 vr_etl - INFO - handle_pageindex_combined_stream | query='Based on our 2022 baseline and the stated 2030 job target, what is the required compound annual growth rate (CAGR) to hit that goal.' doc_id=None temps(search=0.10 answer=0.20) citations=True
+[ 2026-03-06 12:54:47,200 ] 72 vr_etl - INFO - retrieve_node: doc_id=pi-cmmd2tt3k00990hobdgfx363t search_temp=0.10 citations=True
+[ 2026-03-06 12:54:47,200 ] 38 vr_etl - INFO - Getting nodes from PageIndex chat API doc_id=pi-cmmd2tt3k00990hobdgfx363t temp=0.1 citations=True
+[ 2026-03-06 12:55:25,133 ] 96 vr_etl - INFO - retrieve_node: raw_pageindex_output={"doc_name": "State-of-the-Cyber-Security-Sector-in-Ireland-2022-Report_2.pdf", "part": 1}```json
+{
+    "node_list": ["0005", "0033", "0040", "0041", "0057", "0063"],
+    "require_math": true,
+    "citations": ["<doc=State-of-the-Cyber-Security-Sector-in-Ireland-2022-Report_2.pdf;page=5>", "<doc=State-of-the-Cyber-Security-Sector-in-Ireland-2022-Report_2.pdf;page=19>", "<doc=State-of-the-Cyber-Security-Sector-in-Ireland-2022-Report_2.pdf;page=23>", "<doc=State-of-the-Cyber-Security-Sector-in-Ireland-2022-Report_2.pdf;page=33>", "<doc=State-of-the-Cyber-Security-Sector-in-Ireland-2022-Report_2.pdf;page=36>"]
+}
+```
+[ 2026-03-06 12:55:25,133 ] 100 vr_etl - INFO - retrieve_node: parsed nodes=['0005', '0033', '0040', '0041', '0057', '0063'] thinking_len=0 require_math=True inferred_math=True citations=5
+[ 2026-03-06 12:55:25,133 ] 132 vr_etl - INFO - retrieve_node: built context chars=13020 nodes_kept=6
+[ 2026-03-06 12:55:25,133 ] 73 vr_etl - INFO - Graph done | node_count=6 context_chars=13020 use_math=True
+[ 2026-03-06 12:55:25,133 ] 94 vr_etl - INFO - Math branch: calling LLM with evaluate_math tool
+[ 2026-03-06 12:55:25,178 ] 94 vr_etl - INFO - LLM tool call model=deepseek-chat temp=0.10 messages=2
+[ 2026-03-06 12:55:25,743 ] 1025 httpx - INFO - HTTP Request: POST https://api.deepseek.com/chat/completions "HTTP/1.1 200 OK"
+[ 2026-03-06 12:55:29,550 ] 74 vr_etl - INFO - math_tool expression='(17000/7351)**(1/8)-1' -> 0.1105
+[ 2026-03-06 12:55:29,550 ] 117 vr_etl - INFO - Math tool OK | expr='(17000/7351)**(1/8)-1' -> result='0.1105'
+INFO:     127.0.0.1:37988 - "POST /chat HTTP/1.1" 200 OK
+[ 2026-03-06 12:55:29,553 ] 185 vr_etl - INFO - Streaming answer | model=deepseek-reasoner temp=0.20
+[ 2026-03-06 12:55:29,562 ] 59 vr_etl - INFO - Streaming LLM (messages) model=deepseek-reasoner temp=0.20 msg_count=4
+[ 2026-03-06 12:55:29,915 ] 1025 httpx - INFO - HTTP Request: POST https://api.deepseek.com/chat/completions "HTTP/1.1 200 OK"
+[ 2026-03-06 12:55:46,117 ] 162 vr_etl - INFO - Answer missing citations; retrying with citation-enforce prompt
+[ 2026-03-06 12:55:46,127 ] 59 vr_etl - INFO - Streaming LLM (messages) model=deepseek-reasoner temp=0.20 msg_count=2
+[ 2026-03-06 12:55:46,568 ] 1025 httpx - INFO - HTTP Request: POST https://api.deepseek.com/chat/completions "HTTP/1.1 200 OK"
