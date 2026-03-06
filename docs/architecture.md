@@ -31,3 +31,18 @@ Used deepseek-reasoner model here, cause by personal usage, I have experienced t
 I decided to use DeepSeel reasoner model. As deepseek already takes care of maths, but as its a LLM, which just mathematically predicts next word, it can be wrong at calculations sometimes, to overcome this
 we use Sympy to do math calculations over provided expression, for more accuracy.
 
+
+## Limitations
+
+- PageIndex hybrid tree search is slower than vector RAG, which can increase p95 latency, especially for cold starts or large PDFs.
+- Single-turn only: no memory/chat history, so follow-ups can’t reference prior answers, as this implementation was not intended to be a chatbot.
+- Depends on PageIndex SaaS availability/latency; no offline/edge fallback.
+- Observability is minimal: file logging only, no tracing/metrics around retrieval, LLM tokens, or tool success.
+- Math tool path is brittle: relies on the model emitting valid tool JSON.
+
+## Scaling plan
+
+- We can add async + batched Pageindex calls, or parallel Pageindex calls, to reduce time. Also can introduce Redis/memory cache for node_map and retrieval results.
+- Add multiturn chat, so we can ask follow up questions and do more enhance analysis over a document.
+- Enhance ETL pipeline with multthreading to process multiple documents parallely, and maybe add cloud storage to store processed data.
+- Add strict tool calling, with LLM flag check and query + context regex checks.
