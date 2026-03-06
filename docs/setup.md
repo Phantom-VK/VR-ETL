@@ -17,7 +17,3 @@ This file only covers environment prep and credentials. Run/ETL/backend usage is
 How to set:
 1) Copy `.env.example` to `.env` and fill the values, or export them in your shell.
 2) Ensure your virtualenv is active so `python` sees the installed packages.
-
-Next steps:
-- ETL instructions: see [docs/etl.md](etl.md).
-- Backend run instructions are in README.

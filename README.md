@@ -8,7 +8,7 @@
 
 Vectorless, agentic QA over the Cyber Ireland 2022 report. ETL ingests the PDF into a PageIndex tree + node map; a single `/chat` endpoint orchestrates retrieval, math tooling, and streaming answers with citations.
 
-**Query test logs: see [Test Logs/](`Test Logs/`) directory for the three evaluation scenarios.**
+**Query test logs: see [test_queries](test_queries/) directory for the three evaluation scenarios.**
 
 ## Tech Stack
 - FastAPI backend with LangGraph orchestration
@@ -18,7 +18,7 @@ Vectorless, agentic QA over the Cyber Ireland 2022 report. ETL ingests the PDF i
 - Static frontend (vanilla HTML/JS) with streamed NDJSON and Mermaid rendering
 
 ## Documentation
-- [Setup](docs/Setup.md) — environment, env vars
+- [Setup](docs/setup.md) — environment, env vars
 - [ETL](docs/etl.md) — pipeline steps, artifacts
 - [Backend](docs/backend.md) — endpoints, prompts, flow
 - [Frontend](docs/frontend.md) — UI usage
@@ -28,8 +28,8 @@ Vectorless, agentic QA over the Cyber Ireland 2022 report. ETL ingests the PDF i
 ```bash
 pip install -r requirements.txt
 cp .env.example .env  # fill PAGEINDEX_API_KEY, API_KEY, BASE_URL, MODELS
-python run_etl.py     # generates doc_id, tree, node_map
-uvicorn src.backend.api:app --reload
+python run_etl.py     # runs the ETL piepline and generates doc_id, tree, node_map
+uvicorn src.backend.api:app --reload # starts backend endpoint
 # open src/frontend/index.html (or serve via python -m http.server -d src/frontend 5500)
 ```
 
