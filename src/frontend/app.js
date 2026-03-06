@@ -342,6 +342,11 @@ async function streamAnswer() {
 
   const { reasonText, answerText, answerLabel, flushRich } = addAssistantStreamBubble();
 
+  // Show retrieval state until the model starts reasoning
+  let hasStartedReasoning = false;
+  reasonText.textContent = 'Searching document…';
+  reasonText.classList.add('placeholder');
+
   let fullReason = '';
   let fullAnswer = '';
 
@@ -399,6 +404,11 @@ async function streamAnswer() {
 
         // ── tool execution ──
         else if (evt.type === 'tool') {
+          if (!hasStartedReasoning) {
+            hasStartedReasoning = true;
+            reasonText.classList.remove('placeholder');
+            reasonText.textContent = '';
+          }
           setStepState('nodes', 'done');
           setStepState('reason', 'active');
           const expr = evt.args?.expression || '';
@@ -411,6 +421,11 @@ async function streamAnswer() {
 
         // ── reasoning stream ──
         else if (evt.type === 'reason') {
+          if (!hasStartedReasoning) {
+            hasStartedReasoning = true;
+            reasonText.classList.remove('placeholder');
+            reasonText.textContent = '';
+          }
           setStepState('nodes', 'done');
           setStepState('reason', 'active');
           setTicker('Reasoning…', 'working');
@@ -421,6 +436,11 @@ async function streamAnswer() {
 
         // ── answer stream ──
         else if (evt.type === 'answer') {
+          if (!hasStartedReasoning) {
+            hasStartedReasoning = true;
+            reasonText.classList.remove('placeholder');
+            reasonText.textContent = '';
+          }
           setStepState('reason', 'done');
           setStepState('answer', 'active');
           setTicker('Writing answer…', 'working');
@@ -438,6 +458,7 @@ async function streamAnswer() {
         else if (evt.type === 'done') {
           setStepState('answer', 'done');
           answerText.classList.remove('typing-cursor');
+          reasonText.classList.remove('placeholder');
 
           // If no answer tokens but we have reasoning, surface reasoning as answer fallback
           if (!fullAnswer && fullReason) {
@@ -461,6 +482,7 @@ async function streamAnswer() {
         if (evt.type === 'reason') { fullReason += evt.text; }
         if (evt.type === 'answer') { fullAnswer += evt.text; }
         if (evt.type === 'done') {
+          reasonText.classList.remove('placeholder');
           if (!fullAnswer && fullReason) {
             answerLabel.style.display = 'flex';
             answerText.style.display  = 'block';
@@ -473,6 +495,7 @@ async function streamAnswer() {
 
     // Safety: if stream ended without 'done' event, still do rich render
     if (fullReason || fullAnswer) {
+      reasonText.classList.remove('placeholder');
       flushRich(fullReason, fullAnswer);
     }
 
@@ -485,7 +508,7 @@ async function streamAnswer() {
     setTicker('Error: ' + err.message, 'error');
     tickerDot.className = 'ticker-dot error';
 
-    reasonText.classList.remove('typing-cursor');
+    reasonText.classList.remove('typing-cursor', 'placeholder');
     reasonText.textContent = '⚠️ ' + err.message;
     reasonText.style.color = 'var(--red)';
 

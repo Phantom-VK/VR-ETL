@@ -484,6 +484,10 @@ body {
   padding-left: 10px;
   margin-bottom: 8px;
 }
+.reason-text.placeholder {
+  color: var(--text-3);
+  font-style: italic;
+}
 
 .answer-text {
   font-size: 0.96rem;
