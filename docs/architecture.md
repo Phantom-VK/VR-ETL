@@ -19,7 +19,7 @@
 ## Architecture justification
 - **ETL strategy (PageIndex + node_map):** Kept the ETL simple and modular for reuse. Chose PageIndex after exploring vectorless/VLM RAG on social media and read articles about it ,
 thought this is a best chance to learn and implement the Vectorless RAG using Pageindex. It is a vectorless, reasoning-based RAG (retrieval) framework that simulates how human experts navigate and extract knowledge from long, complex documents. Instead of relying on vector similarity search, it transforms documents into a tree-structured index and enables LLMs to perform agentic reasoning over that structure for context-aware retrieval. 
-The retrieval process is traceable and explainable, and requires no vector database and no chunking. On top of this we have added a node_map hash for O(1) node_id→text lookup so when PageIndex returns node_ids we can instantly fetch full context without re-walking the tree. Pageindex is kind of slower than basic vector RAGs, but its
+The retrieval process is traceable and explainable, and requires no vector database and no chunking. Keeps the document structure and tables. On top of this we have added a node_map hash for O(1) node_id→text lookup so when PageIndex returns node_ids we can instantly fetch full context without re-walking the tree. Pageindex is kind of slower than basic vector RAGs, but its
 context accuracy far way better than it.
 
 - **Agent framework (LangGraph + PageIndex search):** LangGraph gives clean orchestration/state, so it’s easy to slot in more tools/steps later and keep state management explicit, I already has used it in one project, so was easier to design this system with Langgraph.
