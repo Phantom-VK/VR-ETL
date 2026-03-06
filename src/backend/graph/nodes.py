@@ -8,6 +8,7 @@ from typing import Any, Dict, List
 from src.backend.graph.state import ChatState
 from src.backend.pageindex_chat import load_doc_id, pageindex_chat_stream
 from src.backend.prompts import build_search_prompt
+from src.backend.prompts_math import query_suggests_math
 from src.utils.logger import logger
 from src.utils.exception import VRETLException
 
@@ -94,11 +95,14 @@ def retrieve_node(state: ChatState) -> ChatState:
         full_search = "".join(search_chunks)
         logger.info("retrieve_node: raw_pageindex_output=%s", full_search[:800])
         thinking, node_list, require_math, citations = _parse_pageindex_search_output(full_search)
+        inferred_math = query_suggests_math(query)
+        use_math_flag = require_math or inferred_math
         logger.info(
-            "retrieve_node: parsed nodes=%s thinking_len=%d require_math=%s citations=%d",
+            "retrieve_node: parsed nodes=%s thinking_len=%d require_math=%s inferred_math=%s citations=%d",
             node_list,
             len(thinking),
             require_math,
+            inferred_math,
             len(citations),
         )
 
@@ -134,7 +138,7 @@ def retrieve_node(state: ChatState) -> ChatState:
             "nodes": nodes,
             "context": context,
             "context_preview": preview,
-            "require_math": require_math,
+            "require_math": use_math_flag,
             "citations": citations,
         }
     except Exception as exc:  # noqa: BLE001
